@@ -1,4 +1,4 @@
-#!python38
+#!python3.8
 from astropy.stats import sigma_clipped_stats
 from astropy.io import fits
 import numpy as np
