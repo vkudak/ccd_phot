@@ -355,6 +355,8 @@ for fit_file in fl:
 
 
 A_general = np.array(A_general)
+A_general = RMS_del(A,A_general, rms_val)
+
 Ag_mean = np.mean(A_general, axis=0)
 Ag_err = Ag_mean[1]
 
