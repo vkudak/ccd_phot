@@ -19,6 +19,7 @@ from astroquery.astrometry_net import AstrometryNet
 from astropy.wcs import WCS
 import ephem
 import configparser
+import warnings
 
 
 def RMS_del(A, value):
@@ -45,7 +46,14 @@ def RMS_del(A, value):
     return A
 
 
+if len(sys.argv) < 2:
+    print("Not enouth parameters. Enter path")
+    sys.exit()
+
+
 path = sys.argv[1]
+
+warnings.filterwarnings("ignore")
 
 ploting = False  # plot each frame with appertures
 c_flag = False   # True to calc A and Cr, according to kr from config_star.ini

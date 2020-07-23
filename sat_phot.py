@@ -10,6 +10,7 @@ import glob
 import sys
 import os
 import configparser
+import warnings
 
 
 def calc_mag(flux, el, rg, A, k):
@@ -21,6 +22,13 @@ def calc_mag(flux, el, rg, A, k):
     mag = A + m_inst + mzr + mr
     return mag
 
+
+if len(sys.argv) < 2:
+    print("Not enouth parameters. Enter path")
+    sys.exit()
+
+
+warnings.filterwarnings("ignore")
 
 path = sys.argv[1]
 
