@@ -56,7 +56,6 @@ path = sys.argv[1]
 warnings.filterwarnings("ignore")
 
 ploting = False  # plot each frame with appertures
-c_flag = False   # True to calc A and Cr, according to kr from config_star.ini
 
 if ploting:
     # for plot
@@ -80,6 +79,7 @@ if os.path.isfile(path + '//config_stars.ini'):
         kr = float(kr)
         max_m = config['Stars_Stand']['max_m']
         rms_val = float(config['Stars_Stand']['A_rms'])
+        c_flag = config['Stars_Stand'].getboolean('calc_C')
 
         r_ap = float(config['APERTURE']['r_ap'])
         an_in = float(config['APERTURE']['an_in'])
@@ -216,7 +216,8 @@ for fit_file in fl:
     A_list = []
     y_ar, x_ar = [], []
     star_count = 0
-    log_file.write("   NOMAD1         Vmag       Rmag         Flux         A        Mz         X           Y\n")
+    if not c_flag:
+        log_file.write("   NOMAD1         Vmag       Rmag         Flux         A        Mz         X           Y\n")
     # "1790-0005788      6.353     5.470    2482736.51558   22.51300  1.31407  894.32825   121.83167"
     for row in table_res:
         if (row["Rmag"] is not None) and (row["Vmag"] is not None):
@@ -356,36 +357,36 @@ for fit_file in fl:
         plt.close('all')
 
     if c_flag:
-        A_general.append([a, 0])
-        c_general.append([c, 0])
+        A_general.append(a)
+        c_general.append(c)
     else:
-        A_general.append([mA, eA])
+        A_general.append(mA)
 
 
 A_general = np.array(A_general)
-A_general = RMS_del(A,A_general, rms_val)
+A_general = RMS_del(A_general, rms_val)
 
 Ag_mean = np.mean(A_general, axis=0)
-Ag_err = Ag_mean[1]
+Ag_err = np.std(A_general, axis=0)
 
 if c_flag:
-    Ag_err = np.std(A_general, axis=0)
+    # Ag_err = np.std(A_general, axis=0)
 
     c_general = np.array(c_general)
     c_mean = np.mean(c_general, axis=0)
     c_err = np.std(c_general, axis=0)
-    Ag_err = np.std(A_general, axis=0)[0]
+    # Ag_err = np.std(A_general, axis=0)[0]
 
 
 log_file.write("\n\n")
 log_file.write("####################################################################\n")
 log_file.write("###-------------------A mean for all frames----------------------###\n")
-log_file.write("%8.5f +/- %8.5f\n" % (Ag_mean[0], Ag_err))
+log_file.write("A = %8.5f , sigma =%8.5f\n" % (Ag_mean, Ag_err))
 log_file.write("###--------------------------------------------------------------###\n")
 
 if c_flag:
     log_file.write("###----------------C mean for all frames-------------------------###\n")
-    log_file.write("C mean for all frames = %8.5f +/- %8.5f\n" % (c_mean[0], c_err[0]))
+    log_file.write("C = %8.5f , sigma =%8.5f\n" % (c_mean, c_err))
     log_file.write("###--------------------------------------------------------------###\n")
 
 log_file.write("####################################################################\n")
