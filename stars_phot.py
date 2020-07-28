@@ -81,6 +81,11 @@ if os.path.isfile(path + '//config_stars.ini'):
         rms_val = float(config['Stars_Stand']['A_rms'])
         c_flag = config['Stars_Stand'].getboolean('calc_C')
 
+        try:
+            dark_frame = config['Stars_Stand']['dark_frame']
+        except Exception:
+            dark_frame = False
+
         r_ap = float(config['APERTURE']['r_ap'])
         an_in = float(config['APERTURE']['an_in'])
         an_out = float(config['APERTURE']['an_out'])
@@ -183,8 +188,20 @@ for fit_file in fl:
 
     header = fits.getheader(path + "//" + fit_file)
     image_tmp = fits.getdata(path + "//" + fit_file)
-    mean, median, std = sigma_clipped_stats(image_tmp, sigma=3.0)
-    image_tmp = image_tmp - mean
+
+    if dark_frame:
+        dark_arr = fits.getdata(dark_frame)
+        image_tmp = image_tmp - dark_arr
+        ph_image = image_tmp
+
+        minI = np.min(image_tmp)
+        if minI < 0:
+            print("Warning! Image - Dark has negativ pixels...")
+            log_file.write("Warning! Image - Dark has negativ pixels...\n")
+    else:
+        ph_image = image_tmp
+        mean, median, std = sigma_clipped_stats(image_tmp, sigma=3.0)
+        image_tmp = image_tmp - mean
 
     xc = header["NAXIS1"] / 2.
     yc = header["NAXIS2"] / 2.
@@ -254,7 +271,7 @@ for fit_file in fl:
                 annulus_aperture = CircularAnnulus(positions, r_in=an_in, r_out=an_out)
 
                 apers = [aperture, annulus_aperture]
-                phot_table = aperture_photometry(image_tmp, apers)
+                phot_table = aperture_photometry(ph_image, apers)
                 for col in phot_table.colnames:
                     phot_table[col].info.format = '%.4g'  # for consistent table output
 
