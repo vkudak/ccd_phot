@@ -14,12 +14,17 @@ import warnings
 
 
 def calc_mag(flux, el, rg, A, k):
-    m_inst = -2.5 * math.log10(flux)
-    mz = 1 / (math.cos(math.pi / 2 - math.radians(el)))  # 1/cos(90-el)
-    mr = -5 * math.log10(rg / 1000.0)
-    mzr = k * mz
+    # print (flux)
+    if flux < 0:
+        mag = 15.0
+        return mag
+    else:
+        m_inst = -2.5 * math.log10(flux)
+        mz = 1 / (math.cos(math.pi / 2 - math.radians(el)))  # 1/cos(90-el)
+        mr = -5 * math.log10(rg / 1000.0)
+        mzr = k * mz
 
-    mag = A + m_inst + mzr + mr
+        mag = A + m_inst + mzr + mr
     return mag
 
 
@@ -45,6 +50,11 @@ if os.path.isfile(path + '//config_sat.ini'):
         A = float(config['STD']['A'])
         k = float(config['STD']['k'])
 
+        try:
+            dark_frame = config['STD']['dark_frame']
+        except Exception:
+            dark_frame = False
+
         r_ap = float(config['APERTURE']['ap'])
         an_in = float(config['APERTURE']['an_in'])
         an_out = float(config['APERTURE']['an_out'])
@@ -63,7 +73,7 @@ fl = []
 for fn in list:
     f = fn.split('.')
     if f[-1] in ['FIT', 'FITS', 'fit', 'fits']:
-        fl.append(l)
+        fl.append(fn)
 
 fl.sort()
 
@@ -77,7 +87,7 @@ if debug:
     else:
         os.makedirs(path + "//fig")
 
-fl = fl[:5]   # first 10 files  ------  file # -1
+# fl = fl[:1]   # first 10 files  ------  file # -1
 
 
 # fl = ["Capture_00016.fits"]
@@ -87,9 +97,12 @@ fr = open(path + "//result.txt", "w")
 
 for fit_file in fl:
     print ("filename=", fit_file)
-    hdu = fits.open(path + "//" + fit_file)[0]
-    data = hdu.data
-    header = hdu.header
+    # hdu = fits.open(path + "//" + fit_file)[0]
+    # data = hdu.data
+    # header = hdu.header
+    data = fits.getdata(path + "//" + fit_file)
+    header = fits.getheader(path + "//" + fit_file)
+
     date_time = header.get('DATE-OBS')
     if date_time == '0001-01-01T00:00:00.0000000':
         date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
@@ -101,6 +114,23 @@ for fit_file in fl:
         t_y = float(header.get('OBJY'))
     except Exception:
         pass
+
+    # if dark_frame:
+    #     dark_arr = fits.getdata(dark_frame)
+    #     data = data - dark_arr
+
+    #     mean, median, std = sigma_clipped_stats(data, sigma=3.0)
+    #     ph_image = data
+    #     data = data - median
+
+    #     minI = np.min(data)
+    #     if minI < 0:
+    #         print("Warning! Image - Dark has negativ pixels...")
+    #         fr.write("Warning! Image - Dark has negativ pixels...\n")
+    # else:
+    #     ph_image = data
+    #     mean, median, std = sigma_clipped_stats(data, sigma=3.0)
+    #     data = data - median
 
     mean, median, std = sigma_clipped_stats(data, sigma=3.0)
 
@@ -119,8 +149,38 @@ for fit_file in fl:
     ##################################
 
     # BEGIN----
-    ph_image = data
+    if dark_frame:
+        dark_arr = fits.getdata(dark_frame)
+
+        data = np.array(data, dtype=float)
+        dark_arr = np.array(dark_arr, dtype=float)
+        # print(dark_arr[214, 640])
+        # print(data[214, 640])
+        # print(data[214, 640]-dark_arr[214, 640])
+
+        ph_image = data - dark_arr
+        ph_image[ph_image < 0] = 0
+
+    else:
+        ph_image = data
     data = data - median
+
+    # import matplotlib.pyplot as plt
+    # from matplotlib.patches import Circle
+    # from astropy.visualization import SqrtStretch, LogStretch
+    # from astropy.visualization.mpl_normalize import ImageNormalize
+    # fig, ax = plt.subplots()
+    # # ax.imshow(data, origin='lower')
+    # norm = ImageNormalize(stretch=LogStretch())
+    # plt.imshow(ph_image, cmap='Greys', origin='lower', norm=norm)
+    # # ax.scatter(target[0], target[1], s=20, c='red', marker='x')
+    # # circle = Circle((target[0], target[1]), 8, facecolor='none', edgecolor='red', linewidth=1, fill=False)
+    # # ax.add_patch(circle)
+    # plt.show()
+    # plt.close('all')
+
+    gate = 20
+    gate2 = int(gate / 2)
 
     if t_x is not None:  # target from header
         target = [t_x, height - t_y]
@@ -130,25 +190,25 @@ for fit_file in fl:
         target.append(error[1])
 
         fig_name = path + "//fig//" + fit_file + "_man.png"
-        target = fit_m(data, x0, y0, gate=20, debug=debug, fig_name=fig_name)
+        target = fit_m(data, x0, y0, gate=gate, debug=debug, fig_name=fig_name)
 
     else:  # SEARCH target
         target = None
         fig_name = path + "//fig//" + fit_file + ".png"
         try:
-            target = fit_m(data, x0, y0, gate=20, debug=debug, fig_name=fig_name)
+            target = fit_m(data, x0, y0, gate=gate, debug=debug, fig_name=fig_name)
 
             target_original = target
 
             x0, y0 = int(target[0]), int(target[1])
             err = target[2]
             if (err > 0.9) and (err < 1.5):
-                target = fit_m(data, x0, y0, gate=10, debug=debug, fig_name=fig_name, centring=True)
+                target = fit_m(data, x0, y0, gate=gate2, debug=debug, fig_name=fig_name, centring=True)
             elif err > 1.5:
-                target = fit_m(data, x0, y0, gate=20, debug=debug, fig_name=fig_name)
+                target = fit_m(data, x0, y0, gate=gate, debug=debug, fig_name=fig_name)
 
                 x0, y0 = int(target[0]), int(target[1])  # one more time with smaller window
-                target = fit_m(data, x0, y0, gate=10, debug=debug, fig_name=fig_name, centring=True)
+                target = fit_m(data, x0, y0, gate=gate2, debug=debug, fig_name=fig_name, centring=True)
 
             err = target[2]
             if err > 1:
@@ -167,10 +227,6 @@ for fit_file in fl:
         aperture = CircularAperture(positions, r=r_ap)
         annulus_aperture = CircularAnnulus(positions, r_in=an_in, r_out=an_out)
 
-        # from photutils import EllipticalAperture, EllipticalAnnulus
-        # aperture = EllipticalAperture(positions, a=4, b=3, theta=-0.25*np.pi)
-        # annulus_aperture = EllipticalAnnulus(positions, a_in=12., a_out=14., b_out=8., theta=-0.25*np.pi)
-
         apers = [aperture, annulus_aperture]
         # print (apers)
         phot_table = aperture_photometry(ph_image, apers)
@@ -178,11 +234,20 @@ for fit_file in fl:
             phot_table[col].info.format = '%.8g'  # for consistent table output
         # print(phot_table)
 
-        bkg_mean = phot_table['aperture_sum_1'] / annulus_aperture.area
+        bkg_mean = phot_table['aperture_sum_1'][0] / annulus_aperture.area
+        # print ("app_sum1=", phot_table['aperture_sum_1'][0])
+        # print ("ann_app_area=", annulus_aperture.area)
+
+        # print ("bkg_mean = ", bkg_mean)
         bkg_sum = bkg_mean * aperture.area
-        final_sum = phot_table['aperture_sum_0'] - bkg_sum
+        # print ("bkg_sum = ", bkg_sum)
+
+        # print("sum and bkgr", phot_table['aperture_sum_0'][0], bkg_sum)
+        final_sum = phot_table['aperture_sum_0'][0] - bkg_sum
+        # print("fin_sum2=", final_sum)
         phot_table['residual_aperture_sum'] = final_sum
-        phot_table['residual_aperture_sum'].info.format = '%.8g'  # for consistent table output
+        # phot_table['residual_aperture_sum'].info.format = '%.8f'  # for consistent table output
+        # print(phot_table['residual_aperture_sum'][0])
 
         z = 0
         if len(phot_table) > 1:
@@ -203,6 +268,8 @@ for fit_file in fl:
             xerr, yerr = 8, 8
 
         flux = phot_table['residual_aperture_sum'][z]
+
+        # print(phot_table['residual_aperture_sum'])
         # print (phot_table)
 
         El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(tle_list, date_time, cospar, norad, name)
