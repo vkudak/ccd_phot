@@ -13,6 +13,22 @@ from astroquery.vizier import Vizier
 import astropy.coordinates as coord
 
 
+def substract(image, dark=None, value=None):
+    image = np.array(image, dtype=float)
+
+    if dark is not None:
+        dark = np.array(dark, dtype=float)
+        # print ("substract DARK")
+        ph_image = image - dark
+
+    if value is not None:
+        # print ("substract VALUE")
+        ph_image = image - value
+
+    ph_image[ph_image < 0] = 0
+    return ph_image
+
+
 def lsqFit(y, x):
     '''
     y=ax+c

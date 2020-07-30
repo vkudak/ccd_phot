@@ -49,6 +49,7 @@ if os.path.isfile(path + '//config_sat.ini'):
 
         A = float(config['STD']['A'])
         k = float(config['STD']['k'])
+        gate = int(config['STD']['gate'])
 
         try:
             dark_frame = config['STD']['dark_frame']
@@ -87,7 +88,7 @@ if debug:
     else:
         os.makedirs(path + "//fig")
 
-# fl = fl[:1]   # first 10 files  ------  file # -1
+# fl = fl[218:]   # first 10 files  ------  file # -1
 
 
 # fl = ["Capture_00016.fits"]
@@ -115,24 +116,9 @@ for fit_file in fl:
     except Exception:
         pass
 
-    # if dark_frame:
-    #     dark_arr = fits.getdata(dark_frame)
-    #     data = data - dark_arr
-
-    #     mean, median, std = sigma_clipped_stats(data, sigma=3.0)
-    #     ph_image = data
-    #     data = data - median
-
-    #     minI = np.min(data)
-    #     if minI < 0:
-    #         print("Warning! Image - Dark has negativ pixels...")
-    #         fr.write("Warning! Image - Dark has negativ pixels...\n")
-    # else:
-    #     ph_image = data
-    #     mean, median, std = sigma_clipped_stats(data, sigma=3.0)
-    #     data = data - median
-
-    mean, median, std = sigma_clipped_stats(data, sigma=3.0)
+    mean, median, std = sigma_clipped_stats(data[20:,:], sigma=3.0)
+    # mean, median, std = sigma_clipped_stats(data, sigma=3.0)
+    # print (mean, median, std)
 
     if fit_file == fl[0]:  # make header--------------------------------------------------------------------
         El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(tle_list, date_time, cospar, norad, name)
@@ -151,19 +137,17 @@ for fit_file in fl:
     # BEGIN----
     if dark_frame:
         dark_arr = fits.getdata(dark_frame)
+        ph_image = substract(data, dark=dark_arr)
 
-        data = np.array(data, dtype=float)
-        dark_arr = np.array(dark_arr, dtype=float)
-        # print(dark_arr[214, 640])
-        # print(data[214, 640])
-        # print(data[214, 640]-dark_arr[214, 640])
-
-        ph_image = data - dark_arr
-        ph_image[ph_image < 0] = 0
-
+        mean2, median2, std2 = sigma_clipped_stats(ph_image[20:,:], sigma=3.0)
+        print (mean2, median2, std2)
+        data = substract(ph_image, value=median2)
+        # data = ph_image
     else:
         ph_image = data
-    data = data - median
+        data = substract(data, value=median)
+
+    # data = data - median
 
     # import matplotlib.pyplot as plt
     # from matplotlib.patches import Circle
@@ -172,14 +156,16 @@ for fit_file in fl:
     # fig, ax = plt.subplots()
     # # ax.imshow(data, origin='lower')
     # norm = ImageNormalize(stretch=LogStretch())
-    # plt.imshow(ph_image, cmap='Greys', origin='lower', norm=norm)
+    # # norm = ImageNormalize(stretch=SqrtStretch())
+    # plt.imshow(data[20:,:], cmap='Greys', origin='lower', norm=norm)
     # # ax.scatter(target[0], target[1], s=20, c='red', marker='x')
     # # circle = Circle((target[0], target[1]), 8, facecolor='none', edgecolor='red', linewidth=1, fill=False)
     # # ax.add_patch(circle)
     # plt.show()
     # plt.close('all')
+    # sys.exit()
 
-    gate = 20
+    # gate = 20
     gate2 = int(gate / 2)
 
     if t_x is not None:  # target from header
@@ -190,7 +176,7 @@ for fit_file in fl:
         target.append(error[1])
 
         fig_name = path + "//fig//" + fit_file + "_man.png"
-        target = fit_m(data, x0, y0, gate=gate, debug=debug, fig_name=fig_name)
+        target = fit_m(data, x0, y0, gate=gate2, debug=debug, fig_name=fig_name, centring=True)
 
     else:  # SEARCH target
         target = None
