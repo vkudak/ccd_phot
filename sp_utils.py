@@ -129,7 +129,7 @@ def fit(image, mf=None):
     return params, pcov
 
 
-def plotting(image, params, save=False, filename=None, par=None, gate=None):
+def plotting(image, params, save=False, filename=None, par=None, err=None, tar=None, gate=None):
     try:
         fig, ax = plt.subplots()
         ax.imshow(image, origin='lower')
@@ -141,7 +141,10 @@ def plotting(image, params, save=False, filename=None, par=None, gate=None):
         if save:
             filename, file_extension = os.path.splitext(filename)
             filename = filename + "_g%i" % gate + file_extension
-            plt.title("parameters= %s \nerrors=%s \ngate=%s" % (par[:2], par[2:], gate), pad=-50, fontsize=10)
+            # plt.title("parameters= %s \nerrors=%s \ngate=%s" % (par[:2], par[2:], gate), pad=-50, fontsize=10)
+
+            x, y = tar[:2]
+            plt.title("parameters= %s \nerrors=%s \ngate=%s  x,y=%2.3f, %2.3f" % (par, err, gate, x, y), pad=-50, fontsize=10)
             plt.savefig(filename)
         else:
             plt.show()
@@ -170,10 +173,11 @@ def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=Fals
         # ----------------------------------------------------------------------------------------
     par, pcov = fit(data_fit)
     err = np.sqrt(np.diag(pcov))
-
-    target = [x0 - gate + par[0], y0 - gate + par[1], err[0], err[1]]
+    amp = par[-1]
+    target = [x0 - gate + par[0], y0 - gate + par[1], err[0], err[1], amp]
     if debug:
-        plotting(data_fit, par, save=True, filename=fig_name, par=target, gate=gate)
+        # plotting(data_fit, par, save=True, filename=fig_name, par=target, gate=gate)
+        plotting(data_fit, par, save=True, filename=fig_name, par=par, err=err, tar=target, gate=gate)
     return target
 
 

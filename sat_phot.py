@@ -88,7 +88,7 @@ if debug:
     else:
         os.makedirs(path + "//fig")
 
-# fl = fl[218:]   # first 10 files  ------  file # -1
+fl = fl[996:]   # first 10 files  ------  file # -1
 
 
 # fl = ["Capture_00016.fits"]
@@ -116,7 +116,7 @@ for fit_file in fl:
     except Exception:
         pass
 
-    mean, median, std = sigma_clipped_stats(data[20:,:], sigma=3.0)
+    mean, median, std = sigma_clipped_stats(data[20:, :], sigma=3.0)
     # mean, median, std = sigma_clipped_stats(data, sigma=3.0)
     # print (mean, median, std)
 
@@ -139,8 +139,8 @@ for fit_file in fl:
         dark_arr = fits.getdata(dark_frame)
         ph_image = substract(data, dark=dark_arr)
 
-        mean2, median2, std2 = sigma_clipped_stats(ph_image[20:,:], sigma=3.0)
-        print (mean2, median2, std2)
+        mean2, median2, std2 = sigma_clipped_stats(ph_image[20:, :], sigma=3.0)
+        # print (mean2, median2, std2)
         data = substract(ph_image, value=median2)
         # data = ph_image
     else:
@@ -166,6 +166,8 @@ for fit_file in fl:
     # sys.exit()
 
     # gate = 20
+    # min_signal = 100
+
     gate2 = int(gate / 2)
 
     if t_x is not None:  # target from header
@@ -182,7 +184,9 @@ for fit_file in fl:
         target = None
         fig_name = path + "//fig//" + fit_file + ".png"
         try:
-            target = fit_m(data, x0, y0, gate=gate, debug=debug, fig_name=fig_name)
+            target = fit_m(data, x0, y0, gate=gate, debug=debug, fig_name=fig_name)  # , centring=True)
+            # print (target[-1])
+            # if target[-1] > min_signal:
 
             target_original = target
 
@@ -203,12 +207,13 @@ for fit_file in fl:
             else:
                 x0, y0 = int(target[0]), int(target[1])
             print ("final=", x0, y0)
+
         except Exception as E:
             print(E)
             print("Error - curve_fit failed\n")
 
     # ------------------------------------ PHOTOMETRY-------------------------------------------------
-    if (target) and (target[2] < 2):
+    if (target) and (target[2] < 2):  # and (target[-1] > min_signal):
         positions = target[:2]
         aperture = CircularAperture(positions, r=r_ap)
         annulus_aperture = CircularAnnulus(positions, r_in=an_in, r_out=an_out)
@@ -245,7 +250,7 @@ for fit_file in fl:
                         z = i
 
         date, time = date_time.split("T")
-        if len(target) == 4:
+        if len(target) == 5:
             xerr, yerr = target[2], target[3]
         else:
             xerr, yerr = 9, 9
