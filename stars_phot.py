@@ -350,6 +350,7 @@ for fit_file in fl:
         c, a, r_max, ind = lsqFit(y_ar, x_ar)
 
         print ("A and c= ", a, c)
+        log_file.write("A and c= %8.3f  %8.3f\n" % (a, c))
 
     if not c_flag:
         # log_file.write("Stars in frame = %i\n" % star_count)
