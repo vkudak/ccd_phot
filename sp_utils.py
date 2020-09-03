@@ -54,7 +54,7 @@ def lsqFit(y, x):
         ind = np.argmax(res)
     else:
         ind = np.argmin(res)
-        res_max = abs(min)
+        res_max = abs(res_min)
     return a, c, res_max, ind
 
 

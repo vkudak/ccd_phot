@@ -88,7 +88,7 @@ if debug:
     else:
         os.makedirs(path + "//fig")
 
-fl = fl[996:]   # first 10 files  ------  file # -1
+# fl = fl[996:]   # first 10 files  ------  file # -1
 
 
 # fl = ["Capture_00016.fits"]
@@ -126,11 +126,21 @@ for fit_file in fl:
         fr.write("# %s\n" % tle_lines[0])
         fr.write("# %s\n" % tle_lines[1])
         fr.write("# %s\n" % tle_lines[2])
-        fr.write("# NORAD  = %s\n" % nor)
+
+        date, time = date_time.split("T")
+        fr.write("# %s %s\n" % (date, time))
+
+        header_last = fits.getheader(path + "//" + fl[-1])
+        date_time9 = header.get('DATE-OBS')
+        date9, time9 = date_time9.split("T")
+        fr.write("# %s %s\n" % (date9, time9))
+        fr.write("# dt = %s\n" % header.get('EXPTIME'))
+
         fr.write("# COSPAR = %s\n" % cosp)
+        fr.write("# NORAD  = %s\n" % nor)
         fr.write("# NAME   = %s\n" % name)
 
-        fr.write("   Date       UT              X          Y         Xerr      Yerr          Flux         mag      filename\n")
+        fr.write("   Date       UT              X          Y         Xerr      Yerr             Flux        magR     Az(deg)   El(deg)   Rg(Mm)    filename\n")
 
     ##################################
 
@@ -266,7 +276,8 @@ for fit_file in fl:
         El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(tle_list, date_time, cospar, norad, name)
         mag = calc_mag(flux, El, Rg, A, k)
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
-        fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %8.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:010.4f}'.format(flux), mag, fit_file))
+        fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
+            (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
 
         # PLOT GENERAL FIT with apperture
         # import matplotlib.pyplot as plt

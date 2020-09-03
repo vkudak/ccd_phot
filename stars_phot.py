@@ -73,13 +73,14 @@ config = configparser.ConfigParser(inline_comment_prefixes="#")
 config.read(path + '//config_stars.ini')
 if os.path.isfile(path + '//config_stars.ini'):
     try:
-        Cr = config['Stars_Stand']['C']
         kr = config['Stars_Stand']['K']
-        Cr = float(Cr)
         kr = float(kr)
         max_m = config['Stars_Stand']['max_m']
         rms_val = float(config['Stars_Stand']['A_rms'])
         c_flag = config['Stars_Stand'].getboolean('calc_C')
+        if not c_flag:
+            Cr = config['Stars_Stand']['C']
+            Cr = float(Cr)
 
         try:
             dark_frame = config['Stars_Stand']['dark_frame']
