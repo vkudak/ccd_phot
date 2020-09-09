@@ -6,10 +6,32 @@ from datetime import datetime
 
 filename = sys.argv[1]
 
-cospar = "123"
-norad = "123"
-name = "123"
-dt = "0.3"
+def read_name(filename):
+	cospar = "none"
+	norad = "none"
+	name = "none"
+	dt = "none"
+
+	with open(filename) as myfile:
+		head = [next(myfile) for x in range(10)]
+	# print(head)
+	# print("---------------------------------"
+	for line in head:
+		line = line.split()
+		# print (line)
+		if line[1].strip() == "COSPAR":
+			cospar = line[3]
+		if line[1].strip() == "NORAD":
+			norad = line[3]
+		if line[1].strip() == "NAME":
+			name = " ".join(line[3:])
+		if line[1].strip() == "dt":
+			dt = line[3]
+	return cospar, norad, name, dt
+
+
+cospar, norad, name, dt = read_name(filename)
+# print(cospar, norad, name, dt)
 
 
 flux, mR, Az, El = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(6, 7, 8, 9))
@@ -21,7 +43,7 @@ date_time = []
 for i in range(0, len(date)):
     date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
 
-print (date_time[2])
+# print (date_time[2])
 
 ## fig im MAG
 plt.rcParams['figure.figsize'] = [12, 6]
@@ -79,7 +101,7 @@ plt.clf()
 plt.rcParams['figure.figsize'] = [12, 6]
 dm = max(flux) - min(flux)
 dm = dm * 0.1
-print(flux[0])
+# print(flux[0])
 plt.axis([min(date_time), max(date_time), min(flux) - dm, max(flux) + dm])
 plt.plot(date_time, flux, ".r-")
 
