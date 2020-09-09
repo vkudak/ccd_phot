@@ -93,7 +93,10 @@ if debug:
 
 # fl = ["Capture_00016.fits"]
 
-fr = open(path + "//result.txt", "w")
+if norad != "":
+	fr = open(path + "//result_" + norad + ".txt", "w")
+else:
+	fr = open(path + "//result.txt", "w")
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
 
 for fit_file in fl:

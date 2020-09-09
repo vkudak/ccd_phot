@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 filename = sys.argv[1]
+filt = "R"
 
 def read_name(filename):
 	cospar = "none"
@@ -50,11 +51,11 @@ plt.rcParams['figure.figsize'] = [12, 6]
 dm = max(mR) - min(mR)
 dm = dm * 0.1
 plt.axis([min(date_time), max(date_time), max(mR) + dm , min(mR) - dm])
-plt.plot(date_time, mR, ".r-")
+plt.plot(date_time, mR, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
-plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s" % (name, norad, cospar, d, t, str(dt)), pad=8, fontsize=12)
+plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=8, fontsize=12)
 plt.ylabel('m_st')
 plt.xlabel('UT')
 ax = plt.gca()
@@ -103,11 +104,11 @@ dm = max(flux) - min(flux)
 dm = dm * 0.1
 # print(flux[0])
 plt.axis([min(date_time), max(date_time), min(flux) - dm, max(flux) + dm])
-plt.plot(date_time, flux, ".r-")
+plt.plot(date_time, flux, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
-plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s" % (name, norad, cospar, d, t, str(dt)), pad=8, fontsize=12)
+plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=8, fontsize=12)
 plt.ylabel('Flux')
 plt.xlabel('UT')
 ax = plt.gca()
