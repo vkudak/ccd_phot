@@ -5,11 +5,34 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 filename = sys.argv[1]
+filt = "R"
 
-cospar = "123"
-norad = "123"
-name = "123"
-dt = "0.3"
+def read_name(filename):
+	cospar = "none"
+	norad = "none"
+	name = "none"
+	dt = "none"
+
+	with open(filename) as myfile:
+		head = [next(myfile) for x in range(10)]
+	# print(head)
+	# print("---------------------------------"
+	for line in head:
+		line = line.split()
+		# print (line)
+		if line[1].strip() == "COSPAR":
+			cospar = line[3]
+		if line[1].strip() == "NORAD":
+			norad = line[3]
+		if line[1].strip() == "NAME":
+			name = " ".join(line[3:])
+		if line[1].strip() == "dt":
+			dt = line[3]
+	return cospar, norad, name, dt
+
+
+cospar, norad, name, dt = read_name(filename)
+# print(cospar, norad, name, dt)
 
 
 flux, mR, Az, El = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(6, 7, 8, 9))
@@ -21,18 +44,18 @@ date_time = []
 for i in range(0, len(date)):
     date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
 
-print (date_time[2])
+# print (date_time[2])
 
 ## fig im MAG
 plt.rcParams['figure.figsize'] = [12, 6]
 dm = max(mR) - min(mR)
 dm = dm * 0.1
 plt.axis([min(date_time), max(date_time), max(mR) + dm , min(mR) - dm])
-plt.plot(date_time, mR, ".r-")
+plt.plot(date_time, mR, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
-plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s" % (name, norad, cospar, d, t, str(dt)), pad=8, fontsize=12)
+plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=8, fontsize=12)
 plt.ylabel('m_st')
 plt.xlabel('UT')
 ax = plt.gca()
@@ -79,13 +102,13 @@ plt.clf()
 plt.rcParams['figure.figsize'] = [12, 6]
 dm = max(flux) - min(flux)
 dm = dm * 0.1
-print(flux[0])
+# print(flux[0])
 plt.axis([min(date_time), max(date_time), min(flux) - dm, max(flux) + dm])
-plt.plot(date_time, flux, ".r-")
+plt.plot(date_time, flux, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
-plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s" % (name, norad, cospar, d, t, str(dt)), pad=8, fontsize=12)
+plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=8, fontsize=12)
 plt.ylabel('Flux')
 plt.xlabel('UT')
 ax = plt.gca()
