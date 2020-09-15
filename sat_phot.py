@@ -140,7 +140,7 @@ for fit_file in fl:
         fr.write("# NORAD  = %s\n" % nor)
         fr.write("# NAME   = %s\n" % name)
 
-        fr.write("   Date       UT              X          Y         Xerr      Yerr             Flux        magR     Az(deg)   El(deg)   Rg(Mm)    filename\n")
+        fr.write("   Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err     magR  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
 
     ##################################
 
@@ -230,34 +230,44 @@ for fit_file in fl:
 
         apers = [aperture, annulus_aperture]
         # print (apers)
-        phot_table = aperture_photometry(ph_image, apers)
+        # phot_table = aperture_photometry(ph_image, apers)
+
+        # -------------------------------------------------------------
+        from photometry_with_errors import *
+
+        # bgr_aperture = CircularAperture(positions, r=an_in)
+        phot_table = iraf_style_photometry(aperture, annulus_aperture, ph_image)
+        #-----------------------------------------------------------------------
+
         for col in phot_table.colnames:
             phot_table[col].info.format = '%.8g'  # for consistent table output
         # print(phot_table)
 
-        bkg_mean = phot_table['aperture_sum_1'][0] / annulus_aperture.area
-        # print ("app_sum1=", phot_table['aperture_sum_1'][0])
-        # print ("ann_app_area=", annulus_aperture.area)
+        # bkg_mean = phot_table['aperture_sum_1'][0] / annulus_aperture.area
+        #
+        # # print ("app_sum1=", phot_table['aperture_sum_1'][0])
+        # # print ("ann_app_area=", annulus_aperture.area)
+        #
+        # # print ("bkg_mean = ", bkg_mean)
+        # bkg_sum = bkg_mean * aperture.area
+        # # print ("bkg_sum = ", bkg_sum)
+        #
+        # # print("sum and bkgr", phot_table['aperture_sum_0'][0], bkg_sum)
+        # final_sum = phot_table['aperture_sum_0'][0] - bkg_sum
+        # # print("fin_sum2=", final_sum)
+        # phot_table['residual_aperture_sum'] = final_sum
+        # # phot_table['residual_aperture_sum'].info.format = '%.8f'  # for consistent table output
+        # # print(phot_table['residual_aperture_sum'][0])
 
-        # print ("bkg_mean = ", bkg_mean)
-        bkg_sum = bkg_mean * aperture.area
-        # print ("bkg_sum = ", bkg_sum)
 
-        # print("sum and bkgr", phot_table['aperture_sum_0'][0], bkg_sum)
-        final_sum = phot_table['aperture_sum_0'][0] - bkg_sum
-        # print("fin_sum2=", final_sum)
-        phot_table['residual_aperture_sum'] = final_sum
-        # phot_table['residual_aperture_sum'].info.format = '%.8f'  # for consistent table output
-        # print(phot_table['residual_aperture_sum'][0])
-
-        z = 0
-        if len(phot_table) > 1:
-            if math.isnan(phot_table['residual_aperture_sum'][z]):
-                z = 1
-            for i in range(0, len(phot_table)):
-                if not math.isnan(phot_table['residual_aperture_sum'][i]):
-                    if phot_table['residual_aperture_sum'][i] > phot_table['residual_aperture_sum'][z]:
-                        z = i
+        # z = 0
+        # if len(phot_table) > 1:
+        #     if math.isnan(phot_table['residual_aperture_sum'][z]):
+        #         z = 1
+        #     for i in range(0, len(phot_table)):
+        #         if not math.isnan(phot_table['residual_aperture_sum'][i]):
+        #             if phot_table['residual_aperture_sum'][i] > phot_table['residual_aperture_sum'][z]:
+        #                 z = i
 
         date, time = date_time.split("T")
         if len(target) == 5:
@@ -268,7 +278,21 @@ for fit_file in fl:
         if (xerr is np.inf) or (yerr is np.inf):
             xerr, yerr = 8, 8
 
-        flux = phot_table['residual_aperture_sum'][z]
+
+        # flux = phot_table['residual_aperture_sum'][z]
+
+        # print("11111111111111")
+        # print (phot_table[0])
+        # print(phot_table['X'][0])
+        # # print(phot_table['X'])
+        # print("111111111111112222")
+
+
+        flux = phot_table['flux'][0]
+        # print(type(flux))
+        flux_err = phot_table['flux_error'][0]
+        mag = phot_table['mag']
+        mag_err = phot_table['mag_error'][0]
 
         # print(phot_table['residual_aperture_sum'])
         # print (phot_table)
@@ -276,8 +300,10 @@ for fit_file in fl:
         El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(tle_list, date_time, cospar, norad, name)
         mag = calc_mag(flux, El, Rg, A, k)
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
-        fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
-            (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
+        # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
+            # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
+        fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s  %s   %6.3f  %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
+            (date, time[:12], phot_table['X'][0], phot_table['Y'][0], xerr, yerr, '{:13.4f}'.format(flux), '{:8.4f}'.format(flux_err),  mag, mag_err, Az, El, Rg, fit_file))
 
         # PLOT GENERAL FIT with apperture
         # import matplotlib.pyplot as plt
