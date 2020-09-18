@@ -51,7 +51,7 @@ Use
 """
 
 import numpy as np
-from astropy.table import Table
+from astropy.table import Table, Column
 from background_median import aperture_stats_tbl
 from photutils import aperture_photometry
 
@@ -103,8 +103,8 @@ def iraf_style_photometry(
     # print("we are here!")
     bg_phot = aperture_stats_tbl(data, bg_apertures, sigma_clip=True)
     # print("we are here--2!")
-    # print(phot)
-    # print(bg_phot)
+    # print(phot[0])
+    # print(bg_phot[0])
 
     if callable(phot_apertures.area):        # Handle photutils change
         ap_area = phot_apertures.area()
@@ -113,6 +113,9 @@ def iraf_style_photometry(
     bg_method_name = 'aperture_{}'.format(bg_method)
 
     flux = phot['aperture_sum'] - bg_phot[bg_method_name] * ap_area
+
+    flux_bkg = bg_phot[bg_method_name] * ap_area
+    snr = phot['aperture_sum']  / flux_bkg  #bg_phot[bg_method_name]
 
     # Need to use variance of the sources
     # for Poisson noise term in error computation.
@@ -134,7 +137,6 @@ def iraf_style_photometry(
     X, Y = phot_apertures.positions.T
 
     # print("start....")
-    from astropy.table import Column
     X = Column(data=[X,], name="X", dtype=float, description="XXX")
     Y = Column(data=[Y,], name="Y", dtype=float, description="YYY")
     # print(flux.shape)
@@ -142,8 +144,8 @@ def iraf_style_photometry(
     #     print(t, type(t), t.shape)
     # print("end....")
 
-    stacked = np.stack([X, Y, flux, flux_error, mag, mag_err], axis=1)
-    names = ['X', 'Y', 'flux', 'flux_error', 'mag', 'mag_error']
+    stacked = np.stack([X, Y, flux, flux_error, mag, mag_err, flux_bkg, snr], axis=1)
+    names = ['X', 'Y', 'flux', 'flux_error', 'mag', 'mag_error', 'flux_bkg', 'snr']
 
     final_tbl = Table(data=stacked, names=names)
     return final_tbl

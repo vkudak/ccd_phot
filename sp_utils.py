@@ -80,6 +80,7 @@ def del_var(table, Filter={'Vmag': '<10'}):
         var_table_len = len(var_table)
         if var_table_len > 0:
             table_final.remove_row(i)
+            # print (table_final.remove_row(i))
             # print ("delete", row)
         i = i + 1
     return table_final

@@ -4,6 +4,7 @@ from astropy.io import fits
 import numpy as np
 from photutils import CircularAperture, CircularAnnulus
 from photutils import aperture_photometry
+from photometry_with_errors import *
 from sp_utils import *
 import math
 import glob
@@ -89,14 +90,21 @@ if debug:
         os.makedirs(path + "//fig")
 
 # fl = fl[996:]   # first 10 files  ------  file # -1
-
-
 # fl = ["Capture_00016.fits"]
 
+# get TIME from first FIT file
+header = fits.getheader(path + "//" + fl[0])
+date_time = header.get('DATE-OBS')
+if date_time == '0001-01-01T00:00:00.0000000':
+    date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
+ut1 = date_time.split("T")[1]
+ut1 = ut1[:2] + ut1[3:5]
+##############
+
 if norad != "":
-	fr = open(path + "//result_" + norad + ".txt", "w")
+    fr = open(path + "//result_" + norad + "_UT" + ut1 + ".txt", "w")
 else:
-	fr = open(path + "//result.txt", "w")
+    fr = open(path + "//result" + "_UT" + ut1 + ".txt", "w")
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
 
 for fit_file in fl:
@@ -236,15 +244,13 @@ for fit_file in fl:
         # phot_table = aperture_photometry(ph_image, apers)
 
         # -------------------------------------------------------------
-        from photometry_with_errors import *
-
         # bgr_aperture = CircularAperture(positions, r=an_in)
         phot_table = iraf_style_photometry(aperture, annulus_aperture, ph_image)
         #-----------------------------------------------------------------------
 
-        for col in phot_table.colnames:
-            phot_table[col].info.format = '%.8g'  # for consistent table output
-        # print(phot_table)
+        # for col in phot_table.colnames:
+        #     phot_table[col].info.format = '%.8g'  # for consistent table output
+        # # print(phot_table)
 
         # bkg_mean = phot_table['aperture_sum_1'][0] / annulus_aperture.area
         #
@@ -283,13 +289,6 @@ for fit_file in fl:
 
 
         # flux = phot_table['residual_aperture_sum'][z]
-
-        # print("11111111111111")
-        # print (phot_table[0])
-        # print(phot_table['X'][0])
-        # # print(phot_table['X'])
-        # print("111111111111112222")
-
 
         flux = phot_table['flux'][0]
         # print(type(flux))

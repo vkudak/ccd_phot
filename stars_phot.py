@@ -42,7 +42,7 @@ def RMS_del(A, value):
     strFormat = len(A_del) * '{:5.3f}, '
     formattedList = strFormat.format(*A_del)
 
-    log_file.write("Delete A value(s): " + formattedList + "\n")
+    log_file.write("Deleted value(s): " + formattedList + "\n")
     return A
 
 
@@ -236,6 +236,8 @@ for fit_file in fl:
     star_count = 0
     if not c_flag:
         log_file.write("   NOMAD1         Vmag       Rmag         Flux         A        Mz         X           Y\n")
+    else:
+        log_file.write("   NOMAD1         Vmag       Rmag      V-R            Flux        Mz         X           Y\n")
     # "1790-0005788      6.353     5.470    2482736.51558   22.51300  1.31407  894.32825   121.83167"
     for row in table_res:
         if (row["Rmag"] is not None) and (row["Vmag"] is not None):
@@ -282,6 +284,9 @@ for fit_file in fl:
                 phot_table['residual_aperture_sum'] = final_sum
                 phot_table['residual_aperture_sum'].info.format = '%.4g'  # for consistent table output
 
+                phot_table['residual_bkg_sum'] = bkg_sum
+                phot_table['residual_bkg_sum'].info.format = '%.4g'
+
                 z = 0
                 if len(phot_table) > 1:
                     if math.isnan(phot_table['residual_aperture_sum'][z]):
@@ -300,6 +305,8 @@ for fit_file in fl:
                     xerr, yerr = 8, 8
 
                 flux = phot_table['residual_aperture_sum'][z]
+                bkg_flux = phot_table['residual_bkg_sum'][z]
+                snr = flux / bkg_flux
 
                 # kr = 0.8
                 # Cr = 0.005
@@ -319,6 +326,15 @@ for fit_file in fl:
                         yq = row["Rmag"] - m_inst - kr * Mz
                         y_ar.append(yq)
                         x_ar.append(vmr)
+
+                        fs = str.format("{0:" ">10.5f}", flux)
+                        bs = str.format("{0:" ">10.5f}", bkg_flux)
+                        snrs = str.format("{0:" ">10.5f}", snr)
+                        xx, yy = positions
+                        Mzs = str.format("{0:" ">3.5f}", Mz)
+                        xxs = str.format("{0:" ">8.5f}", xx)
+                        yys = str.format("{0:" ">8.5f}", yy)
+                        log_file.write("%s   %8.3f  %8.3f  %8.3f   %15s %15s %15s   %8s %10s  %10s\n" % (row["NOMAD1"], row["Vmag"], row["Rmag"], vmr, fs, bs, snr, Mzs, xxs, yys))
                     else:
                         m_inst = -2.5 * math.log10(flux)
                         A = row["Rmag"] - m_inst - kr * Mz - Cr * vmr  # <------------------ A
@@ -383,18 +399,30 @@ for fit_file in fl:
 
 
 A_general = np.array(A_general)
+log_file.write("Filter A..\n")
 A_general = RMS_del(A_general, rms_val)
 
 Ag_mean = np.mean(A_general, axis=0)
 Ag_err = np.std(A_general, axis=0)
 
+# -----------
 if c_flag:
-    # Ag_err = np.std(A_general, axis=0)
-
     c_general = np.array(c_general)
-    c_mean = np.mean(c_general, axis=0)
-    c_err = np.std(c_general, axis=0)
-    # Ag_err = np.std(A_general, axis=0)[0]
+    log_file.write("Filter Cr..\n")
+    c_general = RMS_del(c_general, rms_val)
+
+    cg_mean = np.mean(c_general, axis=0)
+    cg_err = np.std(c_general, axis=0)
+#////////////////
+
+
+# if c_flag:
+#     # Ag_err = np.std(A_general, axis=0)
+
+#     c_general = np.array(c_general)
+#     c_mean = np.mean(c_general, axis=0)
+#     c_err = np.std(c_general, axis=0)
+#     # Ag_err = np.std(A_general, axis=0)[0]
 
 
 log_file.write("\n\n")
@@ -405,7 +433,7 @@ log_file.write("###-------------------------------------------------------------
 
 if c_flag:
     log_file.write("###----------------C mean for all frames-------------------------###\n")
-    log_file.write("C = %8.5f , sigma =%8.5f\n" % (c_mean, c_err))
+    log_file.write("C = %8.5f , sigma =%8.5f\n" % (cg_mean, cg_err))
     log_file.write("###--------------------------------------------------------------###\n")
 
 log_file.write("####################################################################\n")
