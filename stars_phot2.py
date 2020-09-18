@@ -238,7 +238,7 @@ for fit_file in fl:
     if not c_flag:
         log_file.write("   NOMAD1         Vmag       Rmag         Flux         A        Mz         X           Y\n")
     else:
-        log_file.write("   NOMAD1         Vmag       Rmag      V-R            Flux         bkg          snr        Mz         X           Y\n")
+        log_file.write("   NOMAD1         Vmag       Rmag      V-R            Flux       Flux_err     bkg          snr      Mz       X         Y\n")
     # "1790-0005788      6.353     5.470    2482736.51558   22.51300  1.31407  894.32825   121.83167"
     for row in table_res:
         if (row["Rmag"] is not None) and (row["Vmag"] is not None):
@@ -326,13 +326,13 @@ for fit_file in fl:
                 # flux = phot_table['residual_aperture_sum'][z]
                 # bkg_flux = phot_table['residual_bkg_sum'][z]
                 # snr = flux / bkg_flux
+
                 flux = phot_table['flux'][z]
+                flux_err = phot_table['flux_error'][z]
+
                 fb = phot_table['flux_bkg'][z]
                 snr = phot_table['snr'][z]
 
-
-                # kr = 0.8
-                # Cr = 0.005
                 vmr = row["Vmag"] - row["Rmag"]
 
                 star = ephem.FixedBody()
@@ -351,19 +351,20 @@ for fit_file in fl:
                             y_ar.append(yq)
                             x_ar.append(vmr)
 
-                        fs = str.format("{0:" ">10.5f}", flux)
-                        fbs = str.format("{0:" ">10.5f}", fb)
-                        snrs = str.format("{0:" ">10.5f}", snr)
+                        fs = str.format("{0:" ">10.3f}", flux)
+                        fes = str.format("{0:" ">8.3f}", flux_err)
+                        fbs = str.format("{0:" ">10.3f}", fb)
+                        snrs = str.format("{0:" ">10.3f}", snr)
                         xx, yy = positions
-                        Mzs = str.format("{0:" ">3.5f}", Mz)
-                        xxs = str.format("{0:" ">8.5f}", xx)
-                        yys = str.format("{0:" ">8.5f}", yy)
+                        Mzs = str.format("{0:" ">3.3f}", Mz)
+                        xxs = str.format("{0:" ">8.3f}", xx)
+                        yys = str.format("{0:" ">8.3f}", yy)
                         if snr < snr_value:  # print "*" on bed star
-                            log_file.write("%s   %8.3f  %8.3f  %8.3f   %15s %12s %5s*  %8s %10s  %10s\n" % (
-                            row["NOMAD1"], row["Vmag"], row["Rmag"], vmr, fs, fbs, snrs, Mzs, xxs, yys))
+                            log_file.write("%s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s*  %5s %8s %8s\n" % (
+                            row["NOMAD1"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                         else:
-                            log_file.write("%s   %8.3f  %8.3f  %8.3f   %15s %12s %5s   %8s %10s  %10s\n" % (
-                            row["NOMAD1"], row["Vmag"], row["Rmag"], vmr, fs, fbs, snrs, Mzs, xxs, yys))
+                            log_file.write("%s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s   %5s %8s %8s\n" % (
+                            row["NOMAD1"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                     else:
                         m_inst = -2.5 * math.log10(flux)
                         A = row["Rmag"] - m_inst - kr * Mz - Cr * vmr  # <------------------ A
