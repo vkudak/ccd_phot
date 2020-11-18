@@ -365,16 +365,38 @@ for fit_file in fl:
 
                     if exist:
                         a_flux = np.array(database[save_ind]["Flux"])
+                        a_snr = np.array(database[save_ind]["f/b"])
+                        a_xx = np.array(database[save_ind]["X"])
+                        a_yy = np.array(database[save_ind]["Y"])
+                        database[save_ind]["Vmag"] = row["Vmag"]
+                        database[save_ind]["Rmag"] = row["Rmag"]
+                        database[save_ind]["V-R"] = vmr
                         database[save_ind]["Flux"] = np.append(a_flux, flux)
+                        database[save_ind]["f/b"] = np.append(a_snr, snr)
+                        database[save_ind]["Mz"] = Mz
+                        database[save_ind]["X"] = np.append(a_xx, xx)
+                        database[save_ind]["Y"] = np.append(a_yy, yy)
                     else:
-
-                        star_e = {"NOMAD1": row["NOMAD1"], "Flux": [flux]}
+                        star_e = {
+                            "NOMAD1": row["NOMAD1"],
+                            "Vmag": row["Vmag"],
+                            "Rmag": row["Rmag"],
+                            "V-R": vmr,
+                            "Flux": np.array([flux]),
+                            "f/b": np.array([snr]),
+                            "Mz": Mz,
+                            "X": np.array([xx]),
+                            "Y": np.array([yy])
+                        }
                         database.append(star_e)
+                    # star_example = {"NOMAD": "1141-0043729", "Vmag": 5, "Rmag": 5.3, "V-R": 0.3, "flux": [1,2,3,4], "flux_err": [1,2,3,4], "flux/bkg": [1,2,3,4], "Mz": [1,2,3,4], "X": [1,2,3,4], "Y": [1,2,3,4]}
+                    # database = ["NOMAD":star_example,]
+
 
                 except Exception as e:
-                    print (str(e))
+                    # print (str(e))
                     print(row["NOMAD1"], "Fail fit Gauss...")
-                    log_file.write('%s fail in Gaus fit\n' % row["NOMAD1"])
+                    log_file.write('%s fail in Gauss fit\n' % row["NOMAD1"])
                     pass
             # else:
             #     print("not in frame...")
@@ -474,7 +496,9 @@ for fit_file in fl:
 # log_file.close()
 
 print (len(database))
-for star in database:
-    print(star)
-    print(np.mean(star["Flux"]))
-    print(np.std(star["Flux"]))
+
+print (database[0])
+# for star in database:
+#     print(star)
+#     print(np.mean(star["Flux"]))
+#     print(np.std(star["Flux"]))
