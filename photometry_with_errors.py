@@ -115,7 +115,7 @@ def iraf_style_photometry(
     flux = phot['aperture_sum'] - bg_phot[bg_method_name] * ap_area
 
     flux_bkg = bg_phot[bg_method_name] * ap_area
-    snr = phot['aperture_sum']  / flux_bkg  #bg_phot[bg_method_name]
+    snr = phot['aperture_sum'] / flux_bkg  # bg_phot[bg_method_name]
 
     # Need to use variance of the sources
     # for Poisson noise term in error computation.
@@ -137,8 +137,8 @@ def iraf_style_photometry(
     X, Y = phot_apertures.positions.T
 
     # print("start....")
-    X = Column(data=[X,], name="X", dtype=float, description="XXX")
-    Y = Column(data=[Y,], name="Y", dtype=float, description="YYY")
+    X = Column(data=[X, ], name="X", dtype=float, description="XXX")
+    Y = Column(data=[Y, ], name="Y", dtype=float, description="YYY")
     # print(flux.shape)
     # for t in [X, Y, flux, flux_error, mag, mag_err]:
     #     print(t, type(t), t.shape)

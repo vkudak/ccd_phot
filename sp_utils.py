@@ -11,6 +11,7 @@ import math
 from astropy import units as u
 from astroquery.vizier import Vizier
 import astropy.coordinates as coord
+from tqdm import tqdm
 
 
 def substract(image, dark=None, value=None):
@@ -42,8 +43,8 @@ def lsqFit(y, x):
     if y != []:
         wb = np.linalg.lstsq(A, y)  # obtaining the parameters
         a, c = wb[0]
-        #residual = wb[1][0]
-    #else:
+        # residual = wb[1][0]
+    # else:
     #    residual = 999
     for i in range(0, len(x)):
         res.append(abs(y[i] - (a * x[i] + c)))
@@ -72,11 +73,11 @@ def del_var(table, Filter={'Vmag': '<10'}):
     table_final = table
     Vizier.ROW_LIMIT = 5000
     i = 0
-    for row in table_final:
+    for row in tqdm(table_final):
         ra = row["RAJ2000"]
         dec = row["DEJ2000"]
         c = coord.SkyCoord(ra=ra * u.degree, dec=dec * u.degree, frame='icrs')
-        var_table = Vizier.query_region(c, radius='0d0m5s', catalog=["GCVS"], column_filters=Filter)  # , catalog=["GCVS"]
+        var_table = Vizier.query_region(c, radius='0d0m3s', catalog=["GCVS"], column_filters=Filter)  # , catalog=["GCVS"]
         var_table_len = len(var_table)
         if var_table_len > 0:
             table_final.remove_row(i)

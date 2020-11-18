@@ -20,6 +20,7 @@ from astropy.wcs import WCS
 import ephem
 import configparser
 import warnings
+from photometry_with_errors import *
 
 
 def RMS_del(A, value):
@@ -56,6 +57,11 @@ path = sys.argv[1]
 warnings.filterwarnings("ignore")
 
 ploting = False  # plot each frame with appertures
+
+
+# star_example = {"NOMAD": "1141-0043729", "Vmag": 5, "Rmag": 5.3, "V-R": 0.3, "flux": [1,2,3,4], "flux_err": [1,2,3,4], "flux/bkg": [1,2,3,4], "Mz": [1,2,3,4], "X": [1,2,3,4], "Y": [1,2,3,4]}
+# database = ["NOMAD":star_example,]
+database = []
 
 if ploting:
     # for plot
@@ -247,11 +253,8 @@ for fit_file in fl:
 
             xs, ys = w.wcs_world2pix(ra_s, dec_s, 1)
             # print (xs, ys)
-            if (xs > 0) and (ys > 0) and (xs < xc * 2 - 40) and (ys < yc * 2 - 40):
+            if (xs > 0) and (ys > 0) and (xs < xc * 2 - 20) and (ys < yc * 2 - 20):   # cut 20 px from edges
                 star_count = star_count + 1
-                # r_ap = 4
-                # an_in = 12
-                # an_out = 18
 
                 if ploting:
                     fc = Circle((xs, ys), r_ap, facecolor='none', edgecolor='blue', linewidth=1, fill=False)
@@ -262,16 +265,7 @@ for fit_file in fl:
                     # targ_star = fit_m(image_tmp, int(xs), int(ys), gate=10, debug=True, fig_name=str(row["Rmag"]) + "_t.png", centring=True)
                     # targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=False, centring=False, silent=True)
                     figname = "D:\\FTP\\fig.png"
-                    targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=False, fig_name = figname, centring=True, silent=True)
-                    # Centring is failing !!!!!
-
-                    # targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=True, fig_name="fig//" + str(row["Rmag"]) + "_t.png", centring=True, silent=True)
-                # except Exception:
-                #     print (row["NOMAD1"], "Fail fit Gauss...")
-                #     log_file.write('%s fail in Gaus fit\n' % row["NOMAD1"])
-                #     pass
-
-                    from photometry_with_errors import *
+                    targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=False, fig_name=figname, centring=True, silent=True)
 
                     positions = targ_star[:2]
                     aperture = CircularAperture(positions, r=r_ap)
@@ -286,34 +280,6 @@ for fit_file in fl:
                             if not math.isnan(phot_table['flux'][i]):
                                 if phot_table['flux'][i] > phot_table['flux'][z]:
                                     z = i
-
-                    # # Measure aperture flux
-                    # positions = targ_star[:2]
-                    # aperture = CircularAperture(positions, r=r_ap)
-                    # annulus_aperture = CircularAnnulus(positions, r_in=an_in, r_out=an_out)
-                    #
-                    # apers = [aperture, annulus_aperture]
-                    # phot_table = aperture_photometry(ph_image, apers)
-                    # for col in phot_table.colnames:
-                    #     phot_table[col].info.format = '%.4g'  # for consistent table output
-                    #
-                    # bkg_mean = phot_table['aperture_sum_1'] / annulus_aperture.area
-                    # bkg_sum = bkg_mean * aperture.area
-                    # final_sum = phot_table['aperture_sum_0'] - bkg_sum
-                    # phot_table['residual_aperture_sum'] = final_sum
-                    # phot_table['residual_aperture_sum'].info.format = '%.4g'  # for consistent table output
-                    #
-                    # phot_table['residual_bkg_sum'] = bkg_sum
-                    # phot_table['residual_bkg_sum'].info.format = '%.4g'
-
-                    # z = 0
-                    # if len(phot_table) > 1:
-                    #     if math.isnan(phot_table['residual_aperture_sum'][z]):
-                    #         z = 1
-                    #     for i in range(0, len(phot_table)):
-                    #         if not math.isnan(phot_table['residual_aperture_sum'][i]):
-                    #             if phot_table['residual_aperture_sum'][i] > phot_table['residual_aperture_sum'][z]:
-                    #                 z = i
 
                     if len(targ_star) == 4:
                         xerr, yerr = targ_star[2], targ_star[3]
@@ -342,6 +308,7 @@ for fit_file in fl:
                     star.compute(station)
                     el = star.alt  # in radians !!!!!!!!
                     Mz = 1 / (math.cos(math.pi / 2 - el))
+
 
                     if (flux > 0) and (vmr is not masked) and (abs(row["Rmag"] - row["Vmag"]) < 2):
                         if c_flag:
@@ -387,103 +354,127 @@ for fit_file in fl:
                                 ax.add_patch(r_in)
                                 ax.add_patch(r_out)
                             # sys.exit()
-                except Exception:
+
+                    # check if exist in DB
+                    exist = False
+                    save_ind = None
+                    for ind in range(0, len(database)):
+                        if database[ind]["NOMAD1"]==(row["NOMAD1"]):
+                            exist = True
+                            save_ind = ind
+
+                    if exist:
+                        a_flux = np.array(database[save_ind]["Flux"])
+                        database[save_ind]["Flux"] = np.append(a_flux, flux)
+                    else:
+
+                        star_e = {"NOMAD1": row["NOMAD1"], "Flux": [flux]}
+                        database.append(star_e)
+
+                except Exception as e:
+                    print (str(e))
                     print(row["NOMAD1"], "Fail fit Gauss...")
                     log_file.write('%s fail in Gaus fit\n' % row["NOMAD1"])
                     pass
             # else:
             #     print("not in frame...")
-    skipping = False
-    if c_flag:
-        y_ar = np.array(y_ar)
-        x_ar = np.array(x_ar)
-        if len(y_ar) > 5:
-            c, a, r_max, ind = lsqFit(y_ar, x_ar)
+#     skipping = False
+#     if c_flag:
+#         y_ar = np.array(y_ar)
+#         x_ar = np.array(x_ar)
+#         if len(y_ar) > 5:
+#             c, a, r_max, ind = lsqFit(y_ar, x_ar)
 
-            print("A = %2.5f , c = %2.5f " % (a, c))
-            log_file.write("A = %3.8f  c = %3.8f\n" % (a, c))
-            plt.plot(x_ar, y_ar, "xr")
-            p1 = [min(x_ar), max(x_ar)]
-            p2 = [a + c * min(x_ar), a + c * max(x_ar)]
-            plt.plot(p1, p2, "k")
-            plt.xlabel("V-R")
-            plt.ylabel(r'$m_{st}+2.5 \cdot log(Flux)-K_{r} \cdot M_{z}$')
-            plt.title(fit_file)
-            # plt.show()
-            plt.savefig("graph\\" + fit_file +".png")
-            plt.close()
-        else:
-            print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
-            log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
-            skipping = True
+#             print("A = %2.5f , c = %2.5f " % (a, c))
+#             log_file.write("A = %3.8f  c = %3.8f\n" % (a, c))
+#             plt.plot(x_ar, y_ar, "xr")
+#             p1 = [min(x_ar), max(x_ar)]
+#             p2 = [a + c * min(x_ar), a + c * max(x_ar)]
+#             plt.plot(p1, p2, "k")
+#             plt.xlabel("V-R")
+#             plt.ylabel(r'$m_{st}+2.5 \cdot log(Flux)-K_{r} \cdot M_{z}$')
+#             plt.title(fit_file)
+#             # plt.show()
+#             plt.savefig("graph\\" + fit_file +".png")
+#             plt.close()
+#         else:
+#             print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
+#             log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
+#             skipping = True
 
-    if not c_flag:
-        # log_file.write("Stars in frame = %i\n" % star_count)
-        A_list = np.array(A_list)
-        mA = np.mean(A_list)
-        eA = np.std(A_list)
-        print(mA, "+-", eA, "Stars=", len(A_list))
-        print("Filtering, with rms < %3.3f" % rms_val)
+#     if not c_flag:
+#         # log_file.write("Stars in frame = %i\n" % star_count)
+#         A_list = np.array(A_list)
+#         mA = np.mean(A_list)
+#         eA = np.std(A_list)
+#         print(mA, "+-", eA, "Stars=", len(A_list))
+#         print("Filtering, with rms < %3.3f" % rms_val)
 
-        log_file.write("A = %8.5f +/- %8.5f. ###### Stars in frame = %i. A calculated = %i\n" % (mA, eA, star_count, len(A_list)))
-        log_file.write("Start A filtering...(err < %3.3f)\n" % rms_val)
-        # log_file.write("A count = %i\n" % len(A_list))
+#         log_file.write("A = %8.5f +/- %8.5f. ###### Stars in frame = %i. A calculated = %i\n" % (mA, eA, star_count, len(A_list)))
+#         log_file.write("Start A filtering...(err < %3.3f)\n" % rms_val)
+#         # log_file.write("A count = %i\n" % len(A_list))
 
-        A_list2 = RMS_del(A_list, rms_val)
-        mA = np.mean(A_list2)
-        eA = np.std(A_list2)
-        print(mA, "+-", eA, "Stars=", len(A_list2))
-        # log_file.write("A count = %i\n" % len(A_list2))
-        log_file.write("A = %8.5f +/- %8.5f. ###### A count = %i\n\n" % (mA, eA, len(A_list2)))
+#         A_list2 = RMS_del(A_list, rms_val)
+#         mA = np.mean(A_list2)
+#         eA = np.std(A_list2)
+#         print(mA, "+-", eA, "Stars=", len(A_list2))
+#         # log_file.write("A count = %i\n" % len(A_list2))
+#         log_file.write("A = %8.5f +/- %8.5f. ###### A count = %i\n\n" % (mA, eA, len(A_list2)))
 
-    if ploting:
-        plt.show()
-        plt.close('all')
+#     if ploting:
+#         plt.show()
+#         plt.close('all')
 
-    if c_flag and (not skipping):
-        A_general.append(a)
-        c_general.append(c)
-    if (not c_flag) and (not skipping):
-        A_general.append(mA)
+#     if c_flag and (not skipping):
+#         A_general.append(a)
+#         c_general.append(c)
+#     if (not c_flag) and (not skipping):
+#         A_general.append(mA)
 
 
-A_general = np.array(A_general)
-log_file.write("Filter A..\n")
-A_general = RMS_del(A_general, rms_val)
+# A_general = np.array(A_general)
+# log_file.write("Filter A..\n")
+# A_general = RMS_del(A_general, rms_val)
 
-Ag_mean = np.mean(A_general, axis=0)
-Ag_err = np.std(A_general, axis=0)
+# Ag_mean = np.mean(A_general, axis=0)
+# Ag_err = np.std(A_general, axis=0)
 
-# -----------
-if c_flag:
-    c_general = np.array(c_general)
-    log_file.write("Filter Cr..\n")
-    c_general = RMS_del(c_general, rms_val)
+# # -----------
+# if c_flag:
+#     c_general = np.array(c_general)
+#     log_file.write("Filter Cr..\n")
+#     c_general = RMS_del(c_general, rms_val)
 
-    cg_mean = np.mean(c_general, axis=0)
-    cg_err = np.std(c_general, axis=0)
-#////////////////
+#     cg_mean = np.mean(c_general, axis=0)
+#     cg_err = np.std(c_general, axis=0)
+# #////////////////
 
+
+# # if c_flag:
+# #     # Ag_err = np.std(A_general, axis=0)
+
+# #     c_general = np.array(c_general)
+# #     c_mean = np.mean(c_general, axis=0)
+# #     c_err = np.std(c_general, axis=0)
+# #     # Ag_err = np.std(A_general, axis=0)[0]
+
+
+# log_file.write("\n\n")
+# log_file.write("####################################################################\n")
+# log_file.write("###-------------------A mean for all frames----------------------###\n")
+# log_file.write("A = %8.5f , sigma =%8.5f\n" % (Ag_mean, Ag_err))
+# log_file.write("###--------------------------------------------------------------###\n")
 
 # if c_flag:
-#     # Ag_err = np.std(A_general, axis=0)
+#     log_file.write("###----------------C mean for all frames-------------------------###\n")
+#     log_file.write("C = %8.5f , sigma =%8.5f\n" % (cg_mean, cg_err))
+#     log_file.write("###--------------------------------------------------------------###\n")
 
-#     c_general = np.array(c_general)
-#     c_mean = np.mean(c_general, axis=0)
-#     c_err = np.std(c_general, axis=0)
-#     # Ag_err = np.std(A_general, axis=0)[0]
+# log_file.write("####################################################################\n")
+# log_file.close()
 
-
-log_file.write("\n\n")
-log_file.write("####################################################################\n")
-log_file.write("###-------------------A mean for all frames----------------------###\n")
-log_file.write("A = %8.5f , sigma =%8.5f\n" % (Ag_mean, Ag_err))
-log_file.write("###--------------------------------------------------------------###\n")
-
-if c_flag:
-    log_file.write("###----------------C mean for all frames-------------------------###\n")
-    log_file.write("C = %8.5f , sigma =%8.5f\n" % (cg_mean, cg_err))
-    log_file.write("###--------------------------------------------------------------###\n")
-
-log_file.write("####################################################################\n")
-log_file.close()
+print (len(database))
+for star in database:
+    print(star)
+    print(np.mean(star["Flux"]))
+    print(np.std(star["Flux"]))
