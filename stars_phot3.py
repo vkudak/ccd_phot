@@ -391,46 +391,47 @@ for fit_file in fl:
                                 ax.add_patch(r_out)
                             # sys.exit()
 
-                    # check if exist in DB
-                    exist = False
-                    save_ind = None
-                    for ind in range(0, len(database)):
-                        if database[ind]["NOMAD1"] == (row["NOMAD1"]):
-                            exist = True
-                            save_ind = ind
+                    if snr > snr_value:
+                        # check if exist in DB
+                        exist = False
+                        save_ind = None
+                        for ind in range(0, len(database)):
+                            if database[ind]["NOMAD1"] == (row["NOMAD1"]):
+                                exist = True
+                                save_ind = ind
 
-                    if exist:
-                        a_flux = np.array(database[save_ind]["Flux"])
-                        a_snr = np.array(database[save_ind]["f/b"])
-                        a_xx = np.array(database[save_ind]["X"])
-                        a_yy = np.array(database[save_ind]["Y"])
-                        # a_A = np.array(database[save_ind]["A"])
-                        database[save_ind]["Vmag"] = row["Vmag"]
-                        database[save_ind]["Rmag"] = row["Rmag"]
-                        database[save_ind]["V-R"] = vmr
-                        database[save_ind]["Flux"] = np.append(a_flux, flux)
-                        database[save_ind]["f/b"] = np.append(a_snr, snr)
-                        database[save_ind]["Mz"] = Mz
-                        database[save_ind]["X"] = np.append(a_xx, xx)
-                        database[save_ind]["Y"] = np.append(a_yy, yy)
-                        # if not c_flag:
-                        #     database[save_ind]["A"] = np.append(a_A, A)
-                    else:
-                        star_e = {
-                            "NOMAD1": row["NOMAD1"],
-                            "Vmag": row["Vmag"],
-                            "Rmag": row["Rmag"],
-                            "V-R": vmr,
-                            "Flux": np.array([flux]),
-                            "f/b": np.array([snr]),
-                            "Mz": Mz,
-                            "X": np.array([xx]),
-                            "Y": np.array([yy])
-                            # "A": np.array([])
-                        }
-                        # if not c_flag:
-                        #     star_e["A"] = np.array([A])
-                        database.append(star_e)
+                        if exist:
+                            a_flux = np.array(database[save_ind]["Flux"])
+                            a_snr = np.array(database[save_ind]["f/b"])
+                            a_xx = np.array(database[save_ind]["X"])
+                            a_yy = np.array(database[save_ind]["Y"])
+                            # a_A = np.array(database[save_ind]["A"])
+                            database[save_ind]["Vmag"] = row["Vmag"]
+                            database[save_ind]["Rmag"] = row["Rmag"]
+                            database[save_ind]["V-R"] = vmr
+                            database[save_ind]["Flux"] = np.append(a_flux, flux)
+                            database[save_ind]["f/b"] = np.append(a_snr, snr)
+                            database[save_ind]["Mz"] = Mz
+                            database[save_ind]["X"] = np.append(a_xx, xx)
+                            database[save_ind]["Y"] = np.append(a_yy, yy)
+                            # if not c_flag:
+                            #     database[save_ind]["A"] = np.append(a_A, A)
+                        else:
+                            star_e = {
+                                "NOMAD1": row["NOMAD1"],
+                                "Vmag": row["Vmag"],
+                                "Rmag": row["Rmag"],
+                                "V-R": vmr,
+                                "Flux": np.array([flux]),
+                                "f/b": np.array([snr]),
+                                "Mz": Mz,
+                                "X": np.array([xx]),
+                                "Y": np.array([yy])
+                                # "A": np.array([])
+                            }
+                            # if not c_flag:
+                            #     star_e["A"] = np.array([A])
+                            database.append(star_e)
                 except Exception:
                     # except Exception as e:
                     # print(str(e))
@@ -484,7 +485,7 @@ for i in range(len(database)):
 
         if c_flag:
             yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
-            if (yq < 17) and (yq > 14):
+            if (yq < 17) and (yq > 14) and (database[i]["f/b"].mean(axis=0) > snr_value):
                 database[i]["yq"] = yq
                 y_ar.append(database[i]["yq"])
                 x_ar.append(database[i]["V-R"])
