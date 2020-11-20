@@ -43,33 +43,35 @@ def RMS_del(A, value):
     strFormat = len(A_del) * '{:5.3f}, '
     formattedList = strFormat.format(*A_del)
 
+    print("N deleted =", len(A_del))
+    log_file.write("N deleted = %i \n" % len(A_del))
     log_file.write("Deleted value(s): " + formattedList + "\n")
     return A
 
 
-def RMS_del_sigma(A, n_sigma):
-    '''Delete elements of array A until A.RMS>value'''
-    A = np.array(A)
-    sigma = np.std(A)
+# def RMS_del_sigma(A, n_sigma):
+#     '''Delete elements of array A until A.RMS>value'''
+#     A = np.array(A)
+#     sigma = np.std(A)
 
-    c = len(A)
-    for i in range(0, c):
-        mean = A.mean(axis=0)
-        d = []  # X-mean
-        maxx = 0
-        for i in range(len(A)):
-            d.append(abs(A[i] - mean))
-            if d[i] > maxx:
-                maxx = d[i]
-                imax = i
-        A_del.append(A[imax])
-        A = np.delete(A, imax)
+#     c = len(A)
+#     for i in range(0, c):
+#         mean = A.mean(axis=0)
+#         d = []  # X-mean
+#         maxx = 0
+#         for i in range(len(A)):
+#             d.append(abs(A[i] - mean))
+#             if d[i] > maxx:
+#                 maxx = d[i]
+#                 imax = i
+#         A_del.append(A[imax])
+#         A = np.delete(A, imax)
 
-    strFormat = len(A_del) * '{:5.3f}, '
-    formattedList = strFormat.format(*A_del)
+#     strFormat = len(A_del) * '{:5.3f}, '
+#     formattedList = strFormat.format(*A_del)
 
-    log_file.write("Deleted value(s): " + formattedList + "\n")
-    return A
+#     log_file.write("Deleted value(s): " + formattedList + "\n")
+#     return A
 
 
 if len(sys.argv) < 2:
@@ -142,7 +144,7 @@ for fn in list:
 fl.sort()
 
 # print (fl)
-# fl = fl[:1]
+# fl = fl[:10]
 
 
 # #################### BEGIN
@@ -392,6 +394,7 @@ for fit_file in fl:
                         a_snr = np.array(database[save_ind]["f/b"])
                         a_xx = np.array(database[save_ind]["X"])
                         a_yy = np.array(database[save_ind]["Y"])
+                        # a_A = np.array(database[save_ind]["A"])
                         database[save_ind]["Vmag"] = row["Vmag"]
                         database[save_ind]["Rmag"] = row["Rmag"]
                         database[save_ind]["V-R"] = vmr
@@ -400,6 +403,8 @@ for fit_file in fl:
                         database[save_ind]["Mz"] = Mz
                         database[save_ind]["X"] = np.append(a_xx, xx)
                         database[save_ind]["Y"] = np.append(a_yy, yy)
+                        # if not c_flag:
+                        #     database[save_ind]["A"] = np.append(a_A, A)
                     else:
                         star_e = {
                             "NOMAD1": row["NOMAD1"],
@@ -411,122 +416,28 @@ for fit_file in fl:
                             "Mz": Mz,
                             "X": np.array([xx]),
                             "Y": np.array([yy])
+                            # "A": np.array([])
                         }
+                        # if not c_flag:
+                        #     star_e["A"] = np.array([A])
                         database.append(star_e)
-                    # star_example = {"NOMAD": "1141-0043729", "Vmag": 5, "Rmag": 5.3, "V-R": 0.3, "flux": [1,2,3,4], "flux_err": [1,2,3,4], "flux/bkg": [1,2,3,4], "Mz": [1,2,3,4], "X": [1,2,3,4], "Y": [1,2,3,4]}
                 except Exception:
                     # except Exception as e:
-                    # print (str(e))
+                    # print(str(e))
                     print(row["NOMAD1"], "Fail fit Gauss...")
                     log_file.write('%s fail in Gauss fit\n' % row["NOMAD1"])
                     pass
-            # else:
-            #     print("not in frame...")
-#     skipping = False
-#     if c_flag:
-#         y_ar = np.array(y_ar)
-#         x_ar = np.array(x_ar)
-#         if len(y_ar) > 5:
-#             c, a, r_max, ind = lsqFit(y_ar, x_ar)
 
-#             print("A = %2.5f , c = %2.5f " % (a, c))
-#             log_file.write("A = %3.8f  c = %3.8f\n" % (a, c))
-#             plt.plot(x_ar, y_ar, "xr")
-#             p1 = [min(x_ar), max(x_ar)]
-#             p2 = [a + c * min(x_ar), a + c * max(x_ar)]
-#             plt.plot(p1, p2, "k")
-#             plt.xlabel("V-R")
-#             plt.ylabel(r'$m_{st}+2.5 \cdot log(Flux)-K_{r} \cdot M_{z}$')
-#             plt.title(fit_file)
-#             # plt.show()
-#             plt.savefig("graph\\" + fit_file +".png")
-#             plt.close()
-#         else:
-#             print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
-#             log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
-#             skipping = True
-
-#     if not c_flag:
-#         # log_file.write("Stars in frame = %i\n" % star_count)
-#         A_list = np.array(A_list)
-#         mA = np.mean(A_list)
-#         eA = np.std(A_list)
-#         print(mA, "+-", eA, "Stars=", len(A_list))
-#         print("Filtering, with rms < %3.3f" % rms_val)
-
-#         log_file.write("A = %8.5f +/- %8.5f. ###### Stars in frame = %i. A calculated = %i\n" % (mA, eA, star_count, len(A_list)))
-#         log_file.write("Start A filtering...(err < %3.3f)\n" % rms_val)
-#         # log_file.write("A count = %i\n" % len(A_list))
-
-#         A_list2 = RMS_del(A_list, rms_val)
-#         mA = np.mean(A_list2)
-#         eA = np.std(A_list2)
-#         print(mA, "+-", eA, "Stars=", len(A_list2))
-#         # log_file.write("A count = %i\n" % len(A_list2))
-#         log_file.write("A = %8.5f +/- %8.5f. ###### A count = %i\n\n" % (mA, eA, len(A_list2)))
-
-#     if ploting:
-#         plt.show()
-#         plt.close('all')
-
-#     if c_flag and (not skipping):
-#         A_general.append(a)
-#         c_general.append(c)
-#     if (not c_flag) and (not skipping):
-#         A_general.append(mA)
-
-
-# A_general = np.array(A_general)
-# log_file.write("Filter A..\n")
-# A_general = RMS_del(A_general, rms_val)
-
-# Ag_mean = np.mean(A_general, axis=0)
-# Ag_err = np.std(A_general, axis=0)
-
-# # -----------
-# if c_flag:
-#     c_general = np.array(c_general)
-#     log_file.write("Filter Cr..\n")
-#     c_general = RMS_del(c_general, rms_val)
-
-#     cg_mean = np.mean(c_general, axis=0)
-#     cg_err = np.std(c_general, axis=0)
-# #////////////////
-
-
-# # if c_flag:
-# #     # Ag_err = np.std(A_general, axis=0)
-
-# #     c_general = np.array(c_general)
-# #     c_mean = np.mean(c_general, axis=0)
-# #     c_err = np.std(c_general, axis=0)
-# #     # Ag_err = np.std(A_general, axis=0)[0]
-
-
-# log_file.write("\n\n")
-# log_file.write("####################################################################\n")
-# log_file.write("###-------------------A mean for all frames----------------------###\n")
-# log_file.write("A = %8.5f , sigma =%8.5f\n" % (Ag_mean, Ag_err))
-# log_file.write("###--------------------------------------------------------------###\n")
-
-# if c_flag:
-#     log_file.write("###----------------C mean for all frames-------------------------###\n")
-#     log_file.write("C = %8.5f , sigma =%8.5f\n" % (cg_mean, cg_err))
-#     log_file.write("###--------------------------------------------------------------###\n")
-
-# log_file.write("####################################################################\n")
-# log_file.close()
-
+log_file.write("\n\n")
 print("Stars = ", len(database))
+log_file.write("Stars total = %i\n" % len(database))
 
 y_ar = []
 x_ar = []
 
-for i in range(len(database)):
-    # print(star)
-    # print(np.mean(star["Flux"]))
-    # print(np.std(star["Flux"]))
+A_m_list = []
 
+for i in range(len(database)):
     # RMS filter#############################################################
     dd = True
     while dd:
@@ -542,6 +453,8 @@ for i in range(len(database)):
         if len(az) > 0:
             f = np.array(database[i]["Flux"])
             print(database[i]["NOMAD1"], "delete..", az)
+            log_file.write(database[i]["NOMAD1"] + " delete.. " + str(az))
+            log_file.write("\n")
             f = np.delete(f, az)
             database[i]["Flux"] = f
             database[i]["Flux_mean"] = database[i]["Flux"].mean(axis=0)
@@ -554,39 +467,32 @@ for i in range(len(database)):
     # print (database[i]["NOMAD1"], database[i]["Flux_mean"], database[i]["Flux_std"])
     if (database[i]["Flux_mean"] > 0) and (abs(database[i]["V-R"]) < 2):
         m_inst = -2.5 * math.log10(database[i]["Flux_mean"])
-        yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
-        if (yq < 17) and (yq > 14):
-            database[i]["yq"] = yq
 
-        # if database[i]["yq"] < 14.2:
-        #     print(database[i]["NOMAD1"], database[i]["Flux_mean"], database[i]["Flux_std"])
-        #     print(database[i]["NOMAD1"], database[i]["Flux"])
+        if c_flag:
+            yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
+            if (yq < 17) and (yq > 14):
+                database[i]["yq"] = yq
+                y_ar.append(database[i]["yq"])
+                x_ar.append(database[i]["V-R"])
+        else:
+            database[i]["A"] = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"] - Cr * database[i]["V-R"]
+            A_m_list.append(database[i]["A"])
 
-            y_ar.append(database[i]["yq"])
-            x_ar.append(database[i]["V-R"])
-
-
-ai = []
-for i in range(len(database)):
-    if database[i]["Flux_mean"] <= 0:
-        ai.append(i)
-
-
-database = np.delete(np.array(database), ai)
-
-
-# print(y_ar)
-# print(x_ar)
-print("Stars left =", len(y_ar))
+if c_flag:
+    print("Stars left =", len(y_ar))
+    log_file.write("Stars left = %i\n" % len(y_ar))
+else:
+    print("Stars left =", len(A_m_list))
+    log_file.write("Stars left = %i\n" % len(A_m_list))
 
 if c_flag:
     y_ar = np.array(y_ar)
     x_ar = np.array(x_ar)
     if len(y_ar) > 5:
         c, a, r_max, ind = lsqFit(y_ar, x_ar)
-
+        print("############################LSQ_FIT Results#################################")
         print("A = %2.5f , c = %2.5f " % (a, c))
-        log_file.write("A = %3.8f  c = %3.8f\n" % (a, c))
+        # log_file.write("A = %3.8f  c = %3.8f\n" % (a, c))
         plt.plot(x_ar, y_ar, "xr")
         p1 = [min(x_ar), max(x_ar)]
         p2 = [a + c * min(x_ar), a + c * max(x_ar)]
@@ -595,8 +501,38 @@ if c_flag:
         plt.ylabel(r'$m_{st}+2.5 \cdot log(Flux)-K_{r} \cdot M_{z}$')
         # plt.title(fit_file)
         # plt.show()
-        plt.savefig("graph" +".png")
+        plt.savefig("graph" + ".png")
         plt.close()
+
+        log_file.write("\n\n")
+        log_file.write("####################################################################\n")
+        log_file.write("###--------LSQ_FIT Results--(A and Cr all frames)----------------###\n")
+        log_file.write("A = %8.5f , Cr =%8.5f\n" % (a, c))
+        log_file.write("###--------------------------------------------------------------###\n")
+
     else:
         print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
         log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
+else:
+    print("\nPerforming A rms<%3.5f filter" % rms_val)
+    log_file.write("\nPerforming A rms<%3.5f filter\n" % rms_val)
+    A_m_list = RMS_del(A_m_list, rms_val)
+
+    log_file.write("NEW A count: %i\n" % len(A_m_list))
+    strFormat = len(A_m_list) * '{:5.3f}, '
+    formattedList = strFormat.format(*A_m_list)
+    log_file.write("Left A values:" + formattedList + "\n")
+
+    A_mean = np.mean(A_m_list, axis=0)
+    A_err = np.std(A_m_list, axis=0)
+
+    print("############################--A Results--#################################")
+    print("A_mean = %2.5f , A_err = %2.5f " % (A_mean, A_err))
+
+    log_file.write("\n\n")
+    log_file.write("####################--A Results--#####################################\n")
+    log_file.write("A_mean = %8.5f , A_err =%8.5f\n" % (A_mean, A_err))
+    log_file.write("###--------------------------------------------------------------###\n")
+
+log_file.write("####################################################################\n")
+log_file.close()
