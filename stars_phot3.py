@@ -23,9 +23,11 @@ import warnings
 from photometry_with_errors import *
 
 
-def RMS_del(A, value):
+def RMS_del(A, value, B=None):
     '''Delete elements of array A until A.RMS>value'''
     A = np.array(A)
+    if B is not None:
+        B = np.array(B)
     A_del = []
     while A.std(axis=0) > value:
         # rms = A.std(axis=0)
@@ -39,6 +41,8 @@ def RMS_del(A, value):
                 imax = i
         A_del.append(A[imax])
         A = np.delete(A, imax)
+        if B is not None:
+            B = np.delete(B, imax)
 
     strFormat = len(A_del) * '{:5.3f}, '
     formattedList = strFormat.format(*A_del)
@@ -46,7 +50,10 @@ def RMS_del(A, value):
     print("N deleted =", len(A_del))
     log_file.write("N deleted = %i \n" % len(A_del))
     log_file.write("Deleted value(s): " + formattedList + "\n")
-    return A
+    if B is not None:
+        return A, B
+    else:
+        return A
 
 
 # def RMS_del_sigma(A, n_sigma):
@@ -299,14 +306,17 @@ for fit_file in fl:
                     annulus_aperture = CircularAnnulus(positions, r_in=an_in, r_out=an_out)
                     phot_table = iraf_style_photometry(aperture, annulus_aperture, ph_image)
 
+                    # print(phot_table)
+                    # sys.exit()
+
                     z = 0
-                    if len(phot_table) > 1:
-                        if math.isnan(phot_table['flux'][z]):
-                            z = 1
-                        for i in range(0, len(phot_table)):
-                            if not math.isnan(phot_table['flux'][i]):
-                                if phot_table['flux'][i] > phot_table['flux'][z]:
-                                    z = i
+                    # if len(phot_table) > 1:
+                    #     if math.isnan(phot_table['flux'][z]):
+                    #         z = 1
+                    #     for i in range(0, len(phot_table)):
+                    #         if not math.isnan(phot_table['flux'][i]):
+                    #             if phot_table['flux'][i] > phot_table['flux'][z]:
+                    #                 z = i
 
                     if len(targ_star) == 4:
                         xerr, yerr = targ_star[2], targ_star[3]
@@ -369,7 +379,7 @@ for fit_file in fl:
                             xxs = str.format("{0:" ">8.5f}", xx)
                             yys = str.format("{0:" ">8.5f}", yy)
                             Mzs = str.format("{0:" ">3.5f}", Mz)
-                            print("%s   %8.3f  %8.3f  %15s   %8.5f %8s %10s  %10s" % (row["NOMAD1"], row["Vmag"], row["Rmag"], fs, A, Mzs, xxs, yys))
+                            # print("%s   %8.3f  %8.3f  %15s   %8.5f %8s %10s  %10s" % (row["NOMAD1"], row["Vmag"], row["Rmag"], fs, A, Mzs, xxs, yys))
                             log_file.write("%s   %8.3f  %8.3f  %15s   %8.5f %8s %10s  %10s\n" % (row["NOMAD1"], row["Vmag"], row["Rmag"], fs, A, Mzs, xxs, yys))
 
                             if ploting:
@@ -436,6 +446,7 @@ y_ar = []
 x_ar = []
 
 A_m_list = []
+A_mR_list = []
 
 for i in range(len(database)):
     # RMS filter#############################################################
@@ -459,6 +470,9 @@ for i in range(len(database)):
             database[i]["Flux"] = f
             database[i]["Flux_mean"] = database[i]["Flux"].mean(axis=0)
             database[i]["Flux_std"] = database[i]["Flux"].std(axis=0)
+            snr_tmp = database[i]["f/b"]
+            snr_tmp = np.delete(snr_tmp, az)
+            database[i]["f/b"] = snr_tmp
             dd = True
         else:
             dd = False
@@ -476,7 +490,9 @@ for i in range(len(database)):
                 x_ar.append(database[i]["V-R"])
         else:
             database[i]["A"] = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"] - Cr * database[i]["V-R"]
-            A_m_list.append(database[i]["A"])
+            if database[i]["f/b"].mean(axis=0) > snr_value:
+                A_m_list.append(database[i]["A"])
+                A_mR_list.append(database[i]["Rmag"])
 
 if c_flag:
     print("Stars left =", len(y_ar))
@@ -501,7 +517,7 @@ if c_flag:
         plt.ylabel(r'$m_{st}+2.5 \cdot log(Flux)-K_{r} \cdot M_{z}$')
         # plt.title(fit_file)
         # plt.show()
-        plt.savefig("graph" + ".png")
+        plt.savefig("graph_Cr" + ".png")
         plt.close()
 
         log_file.write("\n\n")
@@ -514,9 +530,25 @@ if c_flag:
         print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
         log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
 else:
+    plt.plot(A_mR_list, A_m_list, "xr")
+    plt.xlabel(r'$m_R$')
+    plt.ylabel("A")
+    plt.title("A value all data")
+    # plt.show()
+    plt.savefig("graph_A1" + ".png")
+    plt.close()
+
     print("\nPerforming A rms<%3.5f filter" % rms_val)
     log_file.write("\nPerforming A rms<%3.5f filter\n" % rms_val)
-    A_m_list = RMS_del(A_m_list, rms_val)
+    A_m_list, A_mR_list = RMS_del(A_m_list,  rms_val, B=A_mR_list)
+
+    plt.plot(A_mR_list, A_m_list, "xr")
+    plt.xlabel(r'$m_R$')
+    plt.ylabel("A")
+    plt.title("A value, filtered %s" % rms_val)
+    # plt.show()
+    plt.savefig("graph_A2" + ".png")
+    plt.close()
 
     log_file.write("NEW A count: %i\n" % len(A_m_list))
     strFormat = len(A_m_list) * '{:5.3f}, '
