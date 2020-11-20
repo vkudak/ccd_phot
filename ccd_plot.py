@@ -35,10 +35,11 @@ cospar, norad, name, dt = read_name(filename)
 # print(cospar, norad, name, dt)
 
 
-flux, mR, Az, El = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(6, 7, 8, 9))
+
+flux, mR, Az, El = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(6, 8, 10, 11))
 date, time = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(0, 1), dtype={'names': ('date', 'time'), 'formats': ('S10', 'S12')})
 
-# print (flux[0])
+# print (flux[0], mR[0])
 
 date_time = []
 for i in range(0, len(date)):
@@ -93,7 +94,11 @@ ax.yaxis.grid()
 # ----------------------------------------------------
 
 # plt.show()
-plt.savefig(norad + ".png")
+Tf = Tt2s[0]
+Tf = Tf.split(":")
+TF = Tf[0]+Tf[1]
+
+plt.savefig(norad + "_UT" + TF + ".png")
 plt.clf()
 ####
 
@@ -158,6 +163,7 @@ ax.yaxis.grid()
 # ----------------------------------------------------
 
 # plt.show()
-plt.savefig(norad + "_Imp.png")
+plt.savefig(norad + "_UT" + TF + "_Imp.png")
 plt.clf()
 ####
+# plt.savefig('line_plot.jpg', dpi=300, quality=80, optimize=True, progressive=True)  # 50% less size
