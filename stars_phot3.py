@@ -56,31 +56,6 @@ def RMS_del(A, value, B=None):
         return A
 
 
-# def RMS_del_sigma(A, n_sigma):
-#     '''Delete elements of array A until A.RMS>value'''
-#     A = np.array(A)
-#     sigma = np.std(A)
-
-#     c = len(A)
-#     for i in range(0, c):
-#         mean = A.mean(axis=0)
-#         d = []  # X-mean
-#         maxx = 0
-#         for i in range(len(A)):
-#             d.append(abs(A[i] - mean))
-#             if d[i] > maxx:
-#                 maxx = d[i]
-#                 imax = i
-#         A_del.append(A[imax])
-#         A = np.delete(A, imax)
-
-#     strFormat = len(A_del) * '{:5.3f}, '
-#     formattedList = strFormat.format(*A_del)
-
-#     log_file.write("Deleted value(s): " + formattedList + "\n")
-#     return A
-
-
 if len(sys.argv) < 2:
     print("Not enouth parameters. Enter path")
     sys.exit()
@@ -310,13 +285,6 @@ for fit_file in fl:
                     # sys.exit()
 
                     z = 0
-                    # if len(phot_table) > 1:
-                    #     if math.isnan(phot_table['flux'][z]):
-                    #         z = 1
-                    #     for i in range(0, len(phot_table)):
-                    #         if not math.isnan(phot_table['flux'][i]):
-                    #             if phot_table['flux'][i] > phot_table['flux'][z]:
-                    #                 z = i
 
                     if len(targ_star) == 4:
                         xerr, yerr = targ_star[2], targ_star[3]
