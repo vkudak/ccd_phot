@@ -69,6 +69,16 @@ def get_from_NOMAD(RA, DEC, w="0d60m", h="30m", radius=None, Filter={'Rmag': '<1
     return table
 
 
+def get_from_LAND(RA, DEC, w="0d60m", h="30m", radius=None, Filter={'Rmag': '<13'}):
+    center = coord.SkyCoord(ra=RA, dec=DEC, unit=(u.deg, u.deg), frame='icrs')
+    Vizier.ROW_LIMIT = 5000
+    if radius:
+        table = Vizier.query_region(center, width=w, radius=radius, catalog=["Landolt"], column_filters=Filter)
+    else:
+        table = Vizier.query_region(center, width=w, height=h, catalog=["Landolt"], column_filters=Filter)
+    return table
+
+
 def del_var(table, Filter={'Vmag': '<10'}):
     table_final = table
     Vizier.ROW_LIMIT = 5000
