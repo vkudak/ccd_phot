@@ -448,12 +448,13 @@ for i in range(len(database)):
     #############################################################
 
     # print (database[i]["NOMAD1"], database[i]["Flux_mean"], database[i]["Flux_std"])
-    if (database[i]["Flux_mean"] > 0) and (abs(database[i]["V-R"]) < 2):
+    if (database[i]["Flux_mean"] > 0) and (abs(database[i]["V-R"]) < 1.4):
         m_inst = -2.5 * math.log10(database[i]["Flux_mean"])
 
         if c_flag:
             yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
-            if (yq < 17) and (yq > 14) and (database[i]["f/b"].mean(axis=0) > snr_value):
+            # if (yq < 17) and (yq > 14) and (database[i]["f/b"].mean(axis=0) > snr_value):
+            if (database[i]["f/b"].mean(axis=0) > snr_value):
                 database[i]["yq"] = yq
                 y_ar.append(database[i]["yq"])
                 x_ar.append(database[i]["V-R"])
