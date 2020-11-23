@@ -55,6 +55,7 @@ from astropy.table import Table, Column
 from background_median import aperture_stats_tbl
 from photutils import aperture_photometry
 
+
 def iraf_style_photometry(
         phot_apertures,
         bg_apertures,

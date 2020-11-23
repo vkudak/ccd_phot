@@ -126,7 +126,7 @@ for fn in list:
 fl.sort()
 
 # print (fl)
-# fl = fl[:10]
+fl = fl[50:]
 
 
 # #################### BEGIN
@@ -344,10 +344,10 @@ for fit_file in fl:
                             xxs = str.format("{0:" ">8.3f}", xx)
                             yys = str.format("{0:" ">8.3f}", yy)
                             if snr < snr_value:  # print "*" on bed star
-                                log_file.write("%s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s*  %5s %8s %8s\n" % (
+                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s*  %5s %8s %8s\n" % (
                                 row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                             else:
-                                log_file.write("%s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s   %5s %8s %8s\n" % (
+                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s   %5s %8s %8s\n" % (
                                 row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                         else:
                             m_inst = -2.5 * math.log10(flux)
@@ -413,11 +413,11 @@ for fit_file in fl:
                             # if not c_flag:
                             #     star_e["A"] = np.array([A])
                             database.append(star_e)
-                except Exception as e:
+                except Exception:
                     # except Exception as e:
                     # print(str(e))
                     print(row["SimbadName"], "Fail fit Gauss...")
-                    log_file.write('%s fail in Gauss fit\n' % row["SimbadName"])
+                    log_file.write('%17s fail in Gauss fit\n' % row["SimbadName"])
                     pass
 
 log_file.write("\n\n")
@@ -461,7 +461,7 @@ for i in range(len(database)):
     #############################################################
 
     # print (database[i]["NOMAD1"], database[i]["Flux_mean"], database[i]["Flux_std"])
-    if (database[i]["Flux_mean"] > 0) and (abs(database[i]["V-R"]) < 0.585):
+    if (database[i]["Flux_mean"] > 0) and (abs(database[i]["V-R"]) < 1.7):
         m_inst = -2.5 * math.log10(database[i]["Flux_mean"])
 
         if c_flag:
