@@ -65,7 +65,7 @@ if os.path.isfile(path + '//config_sat.ini'):
         print("Error in inin file\n", E)
         sys.exit()
 else:
-    print ("Error. Cant find config_sat.ini in " + path + '//config_sat.ini')
+    print("Error. Cant find config_sat.ini in " + path + '//config_sat.ini')
 
 tle_list = get_tle(tle_file)
 
@@ -108,7 +108,7 @@ else:
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
 
 for fit_file in fl:
-    print ("filename=", fit_file)
+    print("filename=", fit_file)
     # hdu = fits.open(path + "//" + fit_file)[0]
     # data = hdu.data
     # header = hdu.header

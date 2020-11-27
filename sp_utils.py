@@ -12,6 +12,7 @@ from astropy import units as u
 from astroquery.vizier import Vizier
 import astropy.coordinates as coord
 from tqdm import tqdm
+from sklearn.linear_model import LinearRegression
 
 
 def substract(image, dark=None, value=None):
@@ -30,6 +31,18 @@ def substract(image, dark=None, value=None):
     return ph_image
 
 
+def linReg(x, y):
+    x = np.array(x).reshape((-1, 1))
+    y = np.array(y)
+    model = LinearRegression()
+    model.fit(x, y)
+    r_sq = model.score(x, y)
+    # print('coefficient of determination:', r_sq)
+    # print('intercept:', model.intercept_)
+    # print('slope:', model.coef_[0])
+    return model.intercept_, model.coef_[0], r_sq
+
+
 def lsqFit(y, x):
     '''
     y=ax+c
@@ -41,7 +54,7 @@ def lsqFit(y, x):
     res = []
     # linearly generated sequence
     if y != []:
-        wb = np.linalg.lstsq(A, y)  # obtaining the parameters
+        wb = np.linalg.lstsq(A, y, rcond=None)  # obtaining the parameters
         a, c = wb[0]
         # residual = wb[1][0]
     # else:
@@ -114,6 +127,7 @@ def fit(image, mf=None):
     # max_index = np.where(image >= np.max(image))
     # x0 = max_index[1]  # Middle of X axis
     # y0 = max_index[0]  # Middle of Y axis
+    # print(image.shape)
 
     x0 = int(image.shape[1] / 2)
     y0 = int(image.shape[0] / 2)
@@ -162,7 +176,7 @@ def plotting(image, params, save=False, filename=None, par=None, err=None, tar=N
             plt.show()
         plt.close('all')
     except Exception as E:
-        print (E)
+        print(E)
 
 
 def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=False):
@@ -172,18 +186,40 @@ def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=Fals
     # plt.show()
     if centring:
         if not silent:
-            print ("centring...")
+            print("centring...")
         # ------------------------------------------------------------------ find brighter pixel and center it!!!!
         bx0, by0 = np.unravel_index(data_fit.argmax(), data_fit.shape)
         if not silent:
-            print ("bx, by=", bx0, by0)
+            print("bx, by=", bx0, by0)
 
         sx = by0 - gate
         sy = bx0 - gate
 
         data_fit = image[y0 - gate + sy:y0 + gate + sy, x0 - gate + sx:x0 + gate + sx]
         # ----------------------------------------------------------------------------------------
+    # print(data_fit.shape)
+    # print(data_fit)
+
+    # row_sums = data_fit.sum(axis=1)
+    # data_fit = data_fit / row_sums[:, np.newaxis]
+
+    # from sklearn.preprocessing import normalize
+    # data_fit = normalize(data_fit, axis=1, norm='l2')
+    # print(data_fit)
+
+    # print(np.isfinite(data_fit))
+    # import sys
+    # sys.exit()
+
+    # data_fit = data_fit[np.isfinite(data_fit)]
+    # par = [5,5,0,0]
+    # plotting(data_fit, par, save=True, filename=fig_name, par=par, err=None, tar=[5,5], gate=gate)
+
+    # data_fit = data_fit[~np.isnan(data_fit)]
+    # data_fit = data_fit *2.5
+    # print(data_fit)
     par, pcov = fit(data_fit)
+
     err = np.sqrt(np.diag(pcov))
     amp = par[-1]
     target = [x0 - gate + par[0], y0 - gate + par[1], err[0], err[1], amp]
