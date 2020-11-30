@@ -317,7 +317,7 @@ for fit_file in fl:
                     if (flux > 0) and (vmr is not masked) and (abs(row["Rmag"] - row["Vmag"]) < 2):
                         if c_flag:
                             m_inst = -2.5 * math.log10(flux)
-                            yq = row["Rmag"] - m_inst - kr * Mz
+                            yq = row["Rmag"] - m_inst + kr * Mz
                             if (snr > snr_value):
                                 y_ar.append(yq)
                                 x_ar.append(vmr)
@@ -338,7 +338,7 @@ for fit_file in fl:
                                 row["NOMAD1"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                         else:
                             m_inst = -2.5 * math.log10(flux)
-                            A = row["Rmag"] - m_inst - kr * Mz - Cr * vmr  # <------------------ A
+                            A = row["Rmag"] - m_inst + kr * Mz - Cr * vmr  # <------------------ A
                             A_list.append(A)
 
                             # print ("%8.5f  %8.5f  %10.5f  %8.5f  %8.5f" % (row["Vmag"], math.degrees(el), Mz, ra_s, dec_s))
@@ -452,14 +452,14 @@ for i in range(len(database)):
         m_inst = -2.5 * math.log10(database[i]["Flux_mean"])
 
         if c_flag:
-            yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
+            yq = database[i]["Rmag"] - m_inst + kr * database[i]["Mz"]
             # if (yq < 17) and (yq > 14) and (database[i]["f/b"].mean(axis=0) > snr_value):
             if (database[i]["f/b"].mean(axis=0) > snr_value):
                 database[i]["yq"] = yq
                 y_ar.append(database[i]["yq"])
                 x_ar.append(database[i]["V-R"])
         else:
-            database[i]["A"] = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"] - Cr * database[i]["V-R"]
+            database[i]["A"] = database[i]["Rmag"] - m_inst + kr * database[i]["Mz"] - Cr * database[i]["V-R"]
             if database[i]["f/b"].mean(axis=0) > snr_value:
                 A_m_list.append(database[i]["A"])
                 A_mR_list.append(database[i]["Rmag"])
@@ -471,34 +471,45 @@ else:
     print("Stars left =", len(A_m_list))
     log_file.write("Stars left = %i\n" % len(A_m_list))
 
+
+lya_v = 547
+lya_r = 635
+
 if c_flag:
     y_ar = np.array(y_ar)
     x_ar = np.array(x_ar)
-    if len(y_ar) > 5:
-        c, a, r_max, ind = lsqFit(y_ar, x_ar)
-        print("############################LSQ_FIT Results#################################")
-        print("A = %2.5f , c = %2.5f " % (a, c))
-        # log_file.write("A = %3.8f  c = %3.8f\n" % (a, c))
-        plt.plot(x_ar, y_ar, "xr")
-        p1 = [min(x_ar), max(x_ar)]
-        p2 = [a + c * min(x_ar), a + c * max(x_ar)]
-        plt.plot(p1, p2, "k")
-        plt.xlabel("V-R")
-        plt.ylabel(r'$m_{st}+2.5 \cdot log(Flux)-K_{r} \cdot M_{z}$')
-        # plt.title(fit_file)
-        # plt.show()
-        plt.savefig("graph_Cr" + ".png")
-        plt.close()
 
-        log_file.write("\n\n")
-        log_file.write("####################################################################\n")
-        log_file.write("###--------LSQ_FIT Results--(A and Cr all frames)----------------###\n")
-        log_file.write("A = %8.5f , Cr =%8.5f\n" % (a, c))
-        log_file.write("###--------------------------------------------------------------###\n")
+    r_max = 999
+    while r_max > 0.20:
+        if len(y_ar) > 5:
+            c, a, r_max, ind = lsqFit(y_ar, x_ar)
+            print("############################LSQ_FIT Results#################################")
+            print("A = %2.5f , c = %2.5f " % (a, c))
+            # log_file.write("A = %3.8f  c = %3.8f\n" % (a, c))
+            plt.plot(x_ar, y_ar, "xr")
+            p1 = [min(x_ar), max(x_ar)]
+            p2 = [a + c * min(x_ar), a + c * max(x_ar)]
+            plt.plot(p1, p2, "k")
+            plt.xlabel("V-R")
+            plt.ylabel(r'$m_{st}+2.5 \cdot log(Flux)-K_{r} \cdot M_{z}$')
+            # plt.title(fit_file)
+            # plt.show()
+            plt.savefig("graph_Cr" + ".png")
+            plt.close()
 
-    else:
-        print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
-        log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
+            lya_eff = (lya_r * lya_v) / (c * (lya_v - lya_r) + lya_v)
+            log_file.write("\n\n")
+            log_file.write("####################################################################\n")
+            log_file.write("###--------LSQ_FIT Results--(A and Cr all frames)----------------###\n")
+            log_file.write("A = %8.5f , Cr =%8.5f\n" % (a, c))
+            log_file.write("Lyambda_eff = %5.3f nm\n" % lya_eff)
+            log_file.write("###--------------------------------------------------------------###\n")
+            y_ar = np.delete(y_ar, ind)
+            x_ar = np.delete(x_ar, ind)
+            log_file.write("## rmax=%5.3f  ind=%i\n" % (r_max, ind))
+        else:
+            print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
+            log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
 else:
     plt.plot(A_mR_list, A_m_list, "xr")
     plt.xlabel(r'$m_R$')
