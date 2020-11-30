@@ -145,7 +145,7 @@ for fn in list:
 fl.sort()
 
 # print (fl)
-# fl = fl[50:]
+# fl = fl[0:15] + fl[55:70]
 
 
 # #################### BEGIN
@@ -444,6 +444,7 @@ log_file.write("Stars total = %i\n" % len(database))
 
 y_ar = []
 x_ar = []
+l_ar = []
 
 A_m_list = []
 A_mR_list = []
@@ -492,6 +493,7 @@ for i in range(len(database)):
                 database[i]["yq"] = yq
                 y_ar.append(database[i]["yq"])
                 x_ar.append(database[i]["V-R"])
+                l_ar.append(database[i]["SimbadName"])
                 frfxy.write("%17s    %4.2f   %4.2f  %4.2f   %4.2f   %4.2f\n" %
                             (database[i]["SimbadName"], database[i]["Rmag"], database[i]["V-R"],
                              database[i]["Flux_mean"], database[i]["V-R"], database[i]["yq"]))
@@ -526,7 +528,8 @@ if c_flag:
     # print(am, bm)
 
     r_max = 999
-    while (r_max > 0.15) and (len(y_ar) > 5):
+    r_max_val = 0.25
+    while (r_max > r_max_val) and (len(y_ar) > 5):
         # if len(y_ar) > 5:
         c, a, r_max, ind = lsqFit(y_ar, x_ar)
         # a2, c2, r_sq = linReg(x_ar, y_ar)
@@ -538,7 +541,7 @@ if c_flag:
 
         lya_v = 547
         lya_r = 635
-        lya_eff = (lya_r * lya_v) / (c * (lya_r - lya_v) + lya_v)
+        lya_eff = (lya_r * lya_v) / (c * (lya_v - lya_r) + lya_v)
         print("############################LSQ_FIT Results#################################")
         print("A = %2.5f , c = %2.5f " % (a, c))
         print("Lyambda_eff = %5.3f" % lya_eff)
@@ -565,22 +568,39 @@ if c_flag:
         log_file.write("###--------------------------------------------------------------###\n")
         y_ar = np.delete(y_ar, ind)
         x_ar = np.delete(x_ar, ind)
+        for i in range(len(database)):
+            if database[i]["SimbadName"] == l_ar[ind]:
+                database[i]["Good"] = "Filtered"
         log_file.write("## rmax=%5.3f  ind=%i\n" % (r_max, ind))
         # else:
         #     print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
         #     log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
-    if r_max > 0.15:
+    if r_max > r_max_val:
         print("Only %i values. Cand perform LSQ_FIT...skipping filtering" % len(y_ar))
         log_file.write("Only %i values. Cand perform LSQ_FIT...skipping filtering\n" % len(y_ar))
 
     # ### Write stars data
     log_file.write("######################--STARS  DATA--###################################\n")
-    log_file.write("SimbadName          Vmag   Rmag    V-R     Flux_mean   Flux_std   n_count  (f/b)_maen    Mz     Good?\n")
+    log_file.write("SimbadName          Vmag   Rmag    V-R      Flux_mean      Flux_std   n_count  (f/b)_maen    Mz     Note\n")
     for star in database:
-        log_file.write("%17s  %2.3f  %2.3f  %2.3f     %8.3f   %5.3f    %i         %2.3f     %2.3f    %s\n" %
-                       (star["SimbadName"], star["Vmag"], star["Rmag"], star["V-R"], star["Flux_mean"], star["Flux_std"],
-                        len(star["Flux"]), star["f/b"].mean(axis=0), star["Mz"], star["Good"]))
+        # log_file.write("%17s  %5.3f  %5.3f  % 2.3f     %8.3f   %5.3f    %i         %2.3f     %2.3f    %s\n" %
+        #                (star["SimbadName"], star["Vmag"], star["Rmag"], star["V-R"], star["Flux_mean"], star["Flux_std"],
+        #                 len(star["Flux"]), star["f/b"].mean(axis=0), star["Mz"], star["Good"]))
+
+        log_file.write("{:17s}  {:{width}.{prec}f}  {:{width}.{prec}f}   {:{width}.{prec}f}  {:{width2}.{prec2}f}  {:{width2}.{prec2}f}  {:{width}d}       {:{width}.{prec}f}     {:{width}.{prec}f}    {:7s}\n".format(
+                       star["SimbadName"],
+                       star["Vmag"],
+                       star["Rmag"],
+                       star["V-R"],
+                       star["Flux_mean"],
+                       star["Flux_std"],
+                       len(star["Flux"]),
+                       star["f/b"].mean(axis=0),
+                       star["Mz"],
+                       str(star["Good"]),
+                       width=5, prec=2, width2=12, prec2=3))
     #####################
+    # '{:{width}.{prec}f}'.format(2.7182, width=5, prec=2)
 
 else:
     plt.plot(A_mR_list, A_m_list, "xr")
