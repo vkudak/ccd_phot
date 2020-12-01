@@ -444,6 +444,7 @@ log_file.write("Stars total = %i\n" % len(database))
 
 y_ar = []
 x_ar = []
+yerr_ar = []
 l_ar = []
 
 A_m_list = []
@@ -493,11 +494,17 @@ for i in range(len(database)):
                 database[i]["yq"] = yq
                 y_ar.append(database[i]["yq"])
                 x_ar.append(database[i]["V-R"])
+                fi = np.array(2.5 * np.log10(database[i]["Flux"]))
+                yerr_ar.append(fi.std(axis=0))  # std from  2.5 * log10(Flux)
                 l_ar.append(database[i]["SimbadName"])
+
                 frfxy.write("%17s    %4.2f   %4.2f  %4.2f   %4.2f   %4.2f\n" %
                             (database[i]["SimbadName"], database[i]["Rmag"], database[i]["V-R"],
                              database[i]["Flux_mean"], database[i]["V-R"], database[i]["yq"]))
-                database[i]["Good"] = True
+                database[i]["Good"] = ">Good<"
+            else:
+                database[i]["Good"] = "low s/n"
+
         else:
             database[i]["A"] = database[i]["Rmag"] - m_inst + kr * database[i]["Mz"] - Cr * database[i]["V-R"]
             if database[i]["f/b"].mean(axis=0) > snr_value:
@@ -509,7 +516,7 @@ for i in range(len(database)):
         el2 = math.degrees(np.arccos(1 / Mz))
         frf.write("%4.2f  %4.2f  %3.1f  %6i\n" % (database[i]["Rmag"], database[i]["V-R"], el2, int(database[i]["Flux_mean"])))
     else:
-        database[i]["Good"] = False
+        database[i]["Good"] = "Bed"
 
 frf.close()
 frfxy.close()
@@ -531,7 +538,16 @@ if c_flag:
     r_max_val = 0.25
     while (r_max > r_max_val) and (len(y_ar) > 5):
         # if len(y_ar) > 5:
-        c, a, r_max, ind = lsqFit(y_ar, x_ar)
+        c, a, r_max, ind, r2 = lsqFit(y_ar, x_ar)
+        c_err = 99
+        a_err = 99
+
+        # # with errors
+        # aa, bb, r2, r_max, ind = fit_lin_reg(x_ar, y_ar, yerr_ar)
+        # c, c_err = aa
+        # a, a_err = bb
+        # ####################
+
         # a2, c2, r_sq = linReg(x_ar, y_ar)
         c_fit = c
         # if c < 0:
@@ -543,7 +559,7 @@ if c_flag:
         lya_r = 635
         lya_eff = (lya_r * lya_v) / (c * (lya_v - lya_r) + lya_v)
         print("############################LSQ_FIT Results#################################")
-        print("A = %2.5f , c = %2.5f " % (a, c))
+        print("A = %2.5f +/- %2.5f, c = %2.5f +/- %2.5f" % (a, a_err, c, c_err))
         print("Lyambda_eff = %5.3f" % lya_eff)
         # log_file.write("A = %3.8f  c = %3.8f\n" % (a, c))
 
@@ -563,15 +579,18 @@ if c_flag:
         log_file.write("\n\n")
         log_file.write("####################################################################\n")
         log_file.write("###--------LSQ_FIT Results--(A and Cr all frames)----------------###\n")
-        log_file.write("A = %8.5f , Cr =%8.5f\n" % (a, c))
+        log_file.write("A = %3.5f +/- %3.5f, c = %3.5f +/- %3.5f   R^2=%2.3f\n" % (a, a_err, c, c_err, r2))
         log_file.write("Lyambda_eff = %5.3f nm\n" % lya_eff)
         log_file.write("###--------------------------------------------------------------###\n")
-        y_ar = np.delete(y_ar, ind)
-        x_ar = np.delete(x_ar, ind)
-        for i in range(len(database)):
-            if database[i]["SimbadName"] == l_ar[ind]:
-                database[i]["Good"] = "Filtered"
-        log_file.write("## rmax=%5.3f  ind=%i\n" % (r_max, ind))
+        if r_max > r_max_val:
+            y_ar = np.delete(y_ar, ind)
+            x_ar = np.delete(x_ar, ind)
+            yerr_ar = np.delete(yerr_ar, ind)
+            for i in range(len(database)):
+                if database[i]["SimbadName"] == l_ar[ind]:
+                    database[i]["Good"] = "Filtered %i r_max= %2.5f" % (ind, r_max)
+            log_file.write("## rmax=%5.3f  ind=%i, name = %s\n" % (r_max, ind, l_ar[ind]))
+            l_ar = np.delete(l_ar, ind)
         # else:
         #     print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
         #     log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))

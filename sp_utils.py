@@ -31,6 +31,38 @@ def substract(image, dark=None, value=None):
     return ph_image
 
 
+def linear(x, a, b):
+    '''
+    Linear function.
+    This is just :math:`\\text{linear}(x; a, b) = a x + b`.
+    '''
+    return a * x + b
+
+
+def fit_lin_reg(x, y, yerr):
+    popt, pconv = curve_fit(linear, x, y, sigma=yerr)
+    a, b = popt
+    ae, be = np.sqrt(pconv.diagonal())
+
+    residuals = y - linear(x, *popt)
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((y - np.mean(y))**2)
+    r2 = 1 - (ss_res / ss_tot)
+
+    res = []
+    for i in range(0, len(x)):
+        res.append(abs(y[i] - (a * x[i] + b)))
+    res = np.array(res)
+    res_max = np.max(res)
+    res_min = np.min(res)
+    if res_max > abs(res_min):
+        ind = np.argmax(res)
+    else:
+        ind = np.argmin(res)
+        res_max = abs(res_min)
+    return [a, ae], [b, be], r2, res_max, ind
+
+
 def linReg(x, y):
     x = np.array(x).reshape((-1, 1))
     y = np.array(y)
@@ -56,6 +88,8 @@ def lsqFit(y, x):
     if y != []:
         wb = np.linalg.lstsq(A, y, rcond=None)  # obtaining the parameters
         a, c = wb[0]
+        residual_sum = wb[1]
+        r2 = 1 - residual_sum / (y.size * y.var())  # = R^2
         # residual = wb[1][0]
     # else:
     #    residual = 999
@@ -69,7 +103,7 @@ def lsqFit(y, x):
     else:
         ind = np.argmin(res)
         res_max = abs(res_min)
-    return a, c, res_max, ind
+    return a, c, res_max, ind, r2
 
 
 def get_from_NOMAD(RA, DEC, w="0d60m", h="30m", radius=None, Filter={'Rmag': '<13'}):
