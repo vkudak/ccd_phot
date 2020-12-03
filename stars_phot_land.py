@@ -538,15 +538,17 @@ if c_flag:
     r_max_val = 0.25
     while (r_max > r_max_val) and (len(y_ar) > 5):
         # if len(y_ar) > 5:
-        c, a, r_max, ind, r2 = lsqFit(y_ar, x_ar)
-        c_err = 99
-        a_err = 99
 
-        # # with errors
-        # aa, bb, r2, r_max, ind = fit_lin_reg(x_ar, y_ar, yerr_ar)
-        # c, c_err = aa
-        # a, a_err = bb
-        # ####################
+        # c, a, r_max, ind, r2 = lsqFit(y_ar, x_ar)
+        # c_err = 99
+        # a_err = 99
+
+        # with errors
+        # aa, bb, r2, r_max, ind = fit_lin_reg(x_ar, y_ar, yerr=yerr_ar)
+        aa, bb, r2, r_max, ind = fit_lin_reg(x_ar, y_ar)
+        c, c_err = aa
+        a, a_err = bb
+        ####################
 
         # a2, c2, r_sq = linReg(x_ar, y_ar)
         c_fit = c
