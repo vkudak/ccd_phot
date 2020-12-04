@@ -41,7 +41,7 @@ def linear(x, a, b):
 
 def fit_lin_reg(x, y, yerr=None):
     # popt, pconv = curve_fit(linear, x, y, sigma=yerr)
-    if yerr:
+    if yerr is not None:
         yerr = np.array(yerr)
         popt, pconv = np.polyfit(x, y, 1, cov=True, w=1.0 / yerr)
     else:
