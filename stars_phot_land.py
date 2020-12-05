@@ -464,7 +464,7 @@ for i in range(len(database)):
         if len(az) > 0:
             f = np.array(database[i]["Flux"])
             print(database[i]["SimbadName"], "delete..", az)
-            log_file.write("from star %12s delete value with index %3s\n" % (database[i]["SimbadName"], str(az)))
+            log_file.write("Star %12s delete value with index %3s\n" % (database[i]["SimbadName"], str(az)))
             f = np.delete(f, az)
             database[i]["Flux"] = f
             database[i]["Flux_mean"] = database[i]["Flux"].mean(axis=0)
@@ -475,19 +475,20 @@ for i in range(len(database)):
             dd = True
         else:
             dd = False
-    # filter snr ############################### snr < snr_value ###
-    for zz in range(len(database)):
-        bed_ind = np.nonzero(database[zz]["f/b"] < snr_value)[0]
-        if len(bed_ind) > 0:
-            f = np.array(database[zz]["Flux"])
-            snr_tmp = database[zz]["f/b"]
-            f = np.delete(f, bed_ind)
-            snr_tmp = np.delete(snr_tmp, bed_ind)
-            database[zz]["Flux"] = f
-            database[zz]["f/b"] = snr_tmp
-            database[zz]["Flux_mean"] = database[zz]["Flux"].mean(axis=0)
-            database[zz]["Flux_std"] = database[zz]["Flux"].std(axis=0)
-    # ###########################################################
+    # # filter snr ############################### snr < snr_value ###
+    # for zz in range(len(database)):
+    #     bed_ind = np.nonzero(database[zz]["f/b"] < snr_value)[0]
+    #     if len(bed_ind) > 0:
+    #         log_file.write("Star %12s delete value with low SNR index - %3s\n" % (database[zz]["SimbadName"], str(az)))
+    #         f = np.array(database[zz]["Flux"])
+    #         snr_tmp = database[zz]["f/b"]
+    #         f = np.delete(f, bed_ind)
+    #         snr_tmp = np.delete(snr_tmp, bed_ind)
+    #         database[zz]["Flux"] = f
+    #         database[zz]["f/b"] = snr_tmp
+    #         database[zz]["Flux_mean"] = database[zz]["Flux"].mean(axis=0)
+    #         database[zz]["Flux_std"] = database[zz]["Flux"].std(axis=0)
+    # # ###########################################################
 
     fi = np.array(2.5 * np.log10(database[i]["Flux"]))
     database[i]["m_err"] = fi.std(axis=0)

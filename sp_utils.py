@@ -12,7 +12,7 @@ from astropy import units as u
 from astroquery.vizier import Vizier
 import astropy.coordinates as coord
 from tqdm import tqdm
-from sklearn.linear_model import LinearRegression
+# from sklearn.linear_model import LinearRegression
 
 
 def substract(image, dark=None, value=None):
