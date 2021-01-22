@@ -39,6 +39,17 @@ def linear(x, a, b):
     return a * x + b
 
 
+def R2_calc(calc, observed):
+    Zmm = calc
+    Z3 = observed
+    absError = Zmm - Z3
+    SE = np.square(absError)  # squared errors
+    MSE = np.mean(SE)  # mean squared errors
+    RMSE = np.sqrt(MSE)  # Root Mean Squared Error, RMSE
+    Rsquared = 1.0 - (np.var(absError) / np.var(Z3))
+    return RMSE, Rsquared
+
+
 def fit_lin_reg(x, y, yerr=None):
     # popt, pconv = curve_fit(linear, x, y, sigma=yerr)
     if yerr is not None:
@@ -49,10 +60,11 @@ def fit_lin_reg(x, y, yerr=None):
     a, b = popt
     ae, be = np.sqrt(pconv.diagonal())
 
-    residuals = y - linear(x, *popt)
-    ss_res = np.sum(residuals**2)
-    ss_tot = np.sum((y - np.mean(y))**2)
-    r2 = 1 - (ss_res / ss_tot)
+    # residuals = y - linear(x, *popt)
+    # ss_res = np.sum(residuals**2)
+    # ss_tot = np.sum((y - np.mean(y))**2)
+    # r2 = 1 - (ss_res / ss_tot)
+    rmse, r2 = R2_calc(linear(x, *popt), y)
 
     res = []
     for i in range(0, len(x)):

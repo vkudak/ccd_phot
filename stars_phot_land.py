@@ -305,7 +305,7 @@ for fit_file in fl:
                     # targ_star = fit_m(image_tmp, int(xs), int(ys), gate=10, debug=True, fig_name=str(row["Rmag"]) + "_t.png", centring=True)
                     # targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=False, centring=False, silent=True)
                     figname = "D:\\FTP\\fig.png"
-                    targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=False, fig_name=figname, centring=True, silent=True)
+                    targ_star = fit_m(image_tmp, int(xs), int(ys), gate=3, debug=False, fig_name=figname, centring=True, silent=True)
 
                     positions = targ_star[:2]
                     aperture = CircularAperture(positions, r=r_ap)
@@ -340,7 +340,8 @@ for fit_file in fl:
                     star = ephem.FixedBody()
                     star._ra = ephem.degrees(str(ra_s))
                     star._dec = ephem.degrees(str(dec_s))
-                    station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
+                    # station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")  # QHY
+                    station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S")      # T400
                     star.compute(station)
                     el = star.alt  # in radians !!!!!!!!
                     Mz = 1 / (math.cos(math.pi / 2 - el))
@@ -433,7 +434,7 @@ for fit_file in fl:
                             database.append(star_e)
                 except Exception as e:
                     # except Exception as e:
-                    # print(str(e))
+                    print(str(e))
                     print(row["SimbadName"], "Fail fit Gauss...")
                     log_file.write('%17s fail in Gauss fit\n' % row["SimbadName"])
                     pass
@@ -492,8 +493,8 @@ for i in range(len(database)):
 
     fi = np.array(2.5 * np.log10(database[i]["Flux"]))
     database[i]["m_err"] = fi.std(axis=0)
-
-    m_inst = -2.5 * math.log10(database[i]["Flux_mean"])
+    exp = float(exp)
+    m_inst = -2.5 * math.log10(database[i]["Flux_mean"] / exp)
     yq = database[i]["Rmag"] - m_inst + kr * database[i]["Mz"]
     database[i]["yq"] = yq
 
@@ -543,7 +544,7 @@ if c_flag:
     # print(am, bm)
 
     r_max = 999
-    r_max_val = 0.25
+    r_max_val = 0.10
     print("############################LSQ_FIT Results#################################")
     log_file.write("###--------LSQ_FIT Results--(A and Cr all frames)----------------###\n")
     while (r_max > r_max_val) and (len(y_ar) > 5):
