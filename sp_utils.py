@@ -13,6 +13,9 @@ from astroquery.vizier import Vizier
 import astropy.coordinates as coord
 from tqdm import tqdm
 # from sklearn.linear_model import LinearRegression
+from astropy.modeling import Fittable2DModel, Parameter, models, fitting
+from astropy.modeling.functional_models import Moffat2D, Gaussian2D
+import warnings
 
 
 def substract(image, dark=None, value=None):
@@ -277,6 +280,92 @@ def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=Fals
     if debug:
         # plotting(data_fit, par, save=True, filename=fig_name, par=target, gate=gate)
         plotting(data_fit, par, save=True, filename=fig_name, par=par, err=err, tar=target, gate=gate)
+    return target
+
+
+def fit_moff(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=False):
+    data_fit = image[y0 - gate:y0 + gate, x0 - gate:x0 + gate]
+    if centring:
+        if not silent:
+            print("centring...")
+        # ------------------------------------------------------------------ find brighter pixel and center it!!!!
+        bx0, by0 = np.unravel_index(data_fit.argmax(), data_fit.shape)
+        if not silent:
+            print("bx, by=", bx0, by0)
+
+        sx = by0 - gate
+        sy = bx0 - gate
+
+        data_fit = image[y0 - gate + sy:y0 + gate + sy, x0 - gate + sx:x0 + gate + sx]
+        # ----------------------------------------------------------------------------------------
+    Z3 = data_fit
+    X3 = np.arange(0, gate * 2, 1)
+    Y3 = np.arange(0, gate * 2, 1)
+    X3, Y3 = np.meshgrid(X3, Y3)
+
+    m_init = Moffat2D(amplitude=np.max(Z3), x_0=gate, y_0=gate, gamma=1., alpha=1.0)
+    fit_m = fitting.LevMarLSQFitter()
+    with warnings.catch_warnings():
+        # Ignore model linearity warning from the fitter
+        warnings.simplefilter('ignore')
+        m = fit_m(m_init, X3, Y3, Z3)
+    # print("#####Moffat#########")
+    # print(m.x_0.value)
+    # print(m.y_0.value)
+
+    Zmm = m(X3, Y3)
+    RMSE, Rsquared = R2_calc(Zmm, Z3)
+    # print("x=%2.3f  y=%2.3f   R^2=%2.4f" % (m.x_0.value + xs - gate, m.y_0.value + ys - gate, Rsquared))
+    amp = np.max(Z3)
+    target = [x0 - gate + m.x_0.value, y0 - gate + m.y_0.value, m.fwhm, Rsquared, amp]
+    if debug:
+        # plotting(data_fit, par, save=True, filename=fig_name, par=target, gate=gate)
+        par = [m.x_0.value, m.y_0.value, m.fwhm]
+        plotting(data_fit, par, save=True, filename=fig_name, par=par, err=[0., 0.], tar=target, gate=gate)
+    return target
+
+
+def fit_gaus(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=False):
+    data_fit = image[y0 - gate:y0 + gate, x0 - gate:x0 + gate]
+    if centring:
+        if not silent:
+            print("centring...")
+        # ------------------------------------------------------------------ find brighter pixel and center it!!!!
+        bx0, by0 = np.unravel_index(data_fit.argmax(), data_fit.shape)
+        if not silent:
+            print("bx, by=", bx0, by0)
+
+        sx = by0 - gate
+        sy = bx0 - gate
+
+        data_fit = image[y0 - gate + sy:y0 + gate + sy, x0 - gate + sx:x0 + gate + sx]
+        # ----------------------------------------------------------------------------------------
+    Z3 = data_fit
+    X3 = np.arange(0, gate * 2, 1)
+    Y3 = np.arange(0, gate * 2, 1)
+    X3, Y3 = np.meshgrid(X3, Y3)
+
+    sigma = np.std(Z3)
+    g_init = Gaussian2D(amplitude=np.max(Z3), x_mean=gate, y_mean=gate)
+    fit_g = fitting.LevMarLSQFitter()
+    with warnings.catch_warnings():
+        # Ignore model linearity warning from the fitter
+        warnings.simplefilter('ignore')
+        g = fit_g(g_init, X3, Y3, Z3)
+    # print("#####Moffat#########")
+    # print(m.x_0.value)
+    # print(m.y_0.value)
+
+    Zmm = g(X3, Y3)
+    RMSE, Rsquared = R2_calc(Zmm, Z3)
+    # print("x=%2.3f  y=%2.3f   R^2=%2.4f" % (m.x_0.value + xs - gate, m.y_0.value + ys - gate, Rsquared))
+    amp = np.max(Z3)
+    fwhm = (g.x_fwhm  + g.y_fwhm) /2.
+    target = [x0 - gate + g.x_mean.value, y0 - gate + g.y_mean.value, fwhm, Rsquared, amp]
+    if debug:
+        # plotting(data_fit, par, save=True, filename=fig_name, par=target, gate=gate)
+        par = [g.x_mean.value, g.y_mean.value, fwhm]
+        plotting(data_fit, par, save=True, filename=fig_name, par=par, err=[0., 0.], tar=target, gate=gate)
     return target
 
 

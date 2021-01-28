@@ -110,7 +110,8 @@ if os.path.isfile(path + '//config_stars.ini'):
         kr = config['Stars_Stand']['K']
         kr = float(kr)
         max_m = config['Stars_Stand']['max_m']
-        rms_val = float(config['Stars_Stand']['A_rms'])
+        rms_val = config['Stars_Stand'].getfloat('A_rms')
+        r_max_val = config['Stars_Stand'].getfloat('r_max_val')
         c_flag = config['Stars_Stand'].getboolean('calc_C')
         snr_value = config['Stars_Stand'].getfloat('snr')
         if not c_flag:
@@ -125,6 +126,7 @@ if os.path.isfile(path + '//config_stars.ini'):
         r_ap = float(config['APERTURE']['r_ap'])
         an_in = float(config['APERTURE']['an_in'])
         an_out = float(config['APERTURE']['an_out'])
+        gate = config['APERTURE'].getint('gate')
 
     except Exception as E:
         print("Error in inin file\n", E)
@@ -277,9 +279,9 @@ for fit_file in fl:
     y_ar, x_ar = [], []
     star_count = 0
     if not c_flag:
-        log_file.write("   SimbadName         Vmag       Rmag         Flux         A        Mz         X           Y\n")
+        log_file.write("   SimbadName         Vmag       Rmag         Flux         A        Mz         X           Y       R2     fwhm      Amp\n")
     else:
-        log_file.write("   SimbadName         Vmag       Rmag      V-R            Flux       Flux_err     bkg          snr      Mz       X         Y\n")
+        log_file.write("   SimbadName         Vmag       Rmag      V-R            Flux       Flux_err     bkg          snr      Mz       X         Y       R2     fwhm      Amp\n")
     # "1790-0005788      6.353     5.470    2482736.51558   22.51300  1.31407  894.32825   121.83167"
     for row in table_res:
         if (row["Rmag"] is not None) and (row["Vmag"] is not None):
@@ -305,7 +307,7 @@ for fit_file in fl:
                     # targ_star = fit_m(image_tmp, int(xs), int(ys), gate=10, debug=True, fig_name=str(row["Rmag"]) + "_t.png", centring=True)
                     # targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=False, centring=False, silent=True)
                     figname = "D:\\FTP\\fig.png"
-                    targ_star = fit_m(image_tmp, int(xs), int(ys), gate=3, debug=False, fig_name=figname, centring=True, silent=True)
+                    targ_star = fit_moff(image_tmp, int(xs), int(ys), gate=gate, debug=False, fig_name=figname, centring=True, silent=True)
 
                     positions = targ_star[:2]
                     aperture = CircularAperture(positions, r=r_ap)
@@ -340,8 +342,8 @@ for fit_file in fl:
                     star = ephem.FixedBody()
                     star._ra = ephem.degrees(str(ra_s))
                     star._dec = ephem.degrees(str(dec_s))
-                    # station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")  # QHY
-                    station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S")      # T400
+                    station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")  # QHY
+                    # station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S")      # T400
                     star.compute(station)
                     el = star.alt  # in radians !!!!!!!!
                     Mz = 1 / (math.cos(math.pi / 2 - el))
@@ -362,12 +364,17 @@ for fit_file in fl:
                             Mzs = str.format("{0:" ">3.3f}", Mz)
                             xxs = str.format("{0:" ">8.3f}", xx)
                             yys = str.format("{0:" ">8.3f}", yy)
+
+                            amps = str.format("{0:" ">5n}", int(targ_star[-1]))
+                            fwhms = str.format("{0:" ">2.3f}", targ_star[2])
+                            Rsqs = str.format("{0:" ">1.3f}", targ_star[3])
+
                             if snr < snr_value:  # print "*" on bed star
-                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s*  %5s %8s %8s\n" %
-                                               (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
+                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s*  %5s %8s %8s  %5s %8s %8s\n" %
+                                               (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys, Rsqs, fwhms, amps))
                             else:
-                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s   %5s %8s %8s\n" %
-                                               (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
+                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s   %5s %8s %8s  %5s %8s %8s\n" %
+                                               (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys, Rsqs, fwhms, amps))
                         else:
                             m_inst = -2.5 * math.log10(flux)
                             A = row["Rmag"] - m_inst + kr * Mz - Cr * vmr  # <------------------ A
@@ -433,11 +440,11 @@ for fit_file in fl:
                             #     star_e["A"] = np.array([A])
                             database.append(star_e)
                 except Exception as e:
-                    # except Exception as e:
+                    # # except Exception as e:
                     print(str(e))
-                    print(row["SimbadName"], "Fail fit Gauss...")
-                    log_file.write('%17s fail in Gauss fit\n' % row["SimbadName"])
-                    pass
+                    # print(row["SimbadName"], "Fail fit Gauss...")
+                    # log_file.write('%17s fail in Gauss fit\n' % row["SimbadName"])
+                    # pass
 
 log_file.write("\n\n")
 print("Stars = ", len(database))
@@ -544,7 +551,7 @@ if c_flag:
     # print(am, bm)
 
     r_max = 999
-    r_max_val = 0.10
+    r_max_val = 0.25
     print("############################LSQ_FIT Results#################################")
     log_file.write("###--------LSQ_FIT Results--(A and Cr all frames)----------------###\n")
     while (r_max > r_max_val) and (len(y_ar) > 5):
