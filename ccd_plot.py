@@ -64,7 +64,6 @@ for opt, arg in options:
 cospar, norad, name, dt = read_name(filename)
 # print(cospar, norad, name, dt)
 
-print (grid)
 
 flux, mR, merr, Az, El = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(6, 8, 9, 10, 11))
 date, time = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(0, 1),
@@ -125,7 +124,6 @@ Tt2s = np.array(Tt2s)
 ax.set_xticks(Tt2[tt_idx])  # new_tick_locations
 ax.set_xticklabels(Tt2s[tt_idx], fontsize=10)
 
-print(grid)
 if grid:
     ax.xaxis.grid()
     ax.yaxis.grid()
