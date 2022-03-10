@@ -51,11 +51,7 @@ if os.path.isfile(path + '//config_sat.ini'):
         A = float(config['STD']['A'])
         k = float(config['STD']['k'])
         gate = int(config['STD']['gate'])
-
-        try:
-            sflat = bool(config['STD']['synth_flat'])
-        except Exception:
-            sflat = False
+        Filter = config['STD']['R']
 
         try:
             dark_frame = config['STD']['dark_frame']
@@ -107,48 +103,10 @@ ut1 = ut1[:2] + ut1[3:5]
 ##############
 
 if norad != "":
-    fr = open(path + "//result_" + norad + "_UT" + ut1 + ".txt", "w")
+    fr = open(path + "//result_" + norad + "_UT" + ut1 + ".ph" + Filter, "w")
 else:
-    fr = open(path + "//result" + "_UT" + ut1 + ".txt", "w")
+    fr = open(path + "//result" + "_UT" + ut1 + ".ph" + Filter, "w")
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
-
-if sflat:
-    sl = int(len(fl) / 2)
-    sk = 0
-    # s_data= np.array()
-    for fit_file in fl[sl-10:sl+10]:
-        data = fits.getdata(path + "//" + fit_file)
-        header = fits.getheader(path + "//" + fit_file)
-        width = int(header.get('NAXIS1'))
-        height = int(header.get('NAXIS2'))
-        # s_data.append(data)
-        if fit_file == fl[sl-10]:
-            s_data = np.zeros(shape=(height, width))
-        s_data += data
-        k = k + 1
-    s_data = s_data / k
-
-    # plt.figure(figsize=(8, 2.5))
-    # # plt.subplot(1, 3, 1)
-    # plt.imshow(s_data, origin='lower', interpolation='nearest', vmin=0, vmax=1e2, cmap='gray') #, norm=PowerNorm(0.5))
-    # plt.title("Data")
-    # plt.show()
-
-    # Xf = np.arange(0, width, 1)
-    # Yf = np.arange(0, height-20, 1)
-    # Xf, Yf = np.meshgrid(Xf, Yf)
-
-    # print(Xf.shape, Yf.shape, data[20:, :].shape)
-
-    flat = synth_flat(width, height, s_data, pol_order=2, cut=True)
-
-    # print(Xf.shape, Yf.shape, data[20:, :].shape, data.shape, flat.shape)
-
-    # sys.exit()
-
-    # corrected frame = frame * np.mean(flat) / flat
-    # https://en.wikipedia.org/wiki/Flat-field_correction
-
 
 for fit_file in fl:
     print("filename=", fit_file)
@@ -202,8 +160,6 @@ for fit_file in fl:
     if dark_frame:
         dark_arr = fits.getdata(dark_frame)
         ph_image = substract(data, dark=dark_arr)
-        if sflat:
-            ph_image = ph_image * np.mean(flat) / flat
 
         mean2, median2, std2 = sigma_clipped_stats(ph_image[20:, :], sigma=3.0)
         # print (mean2, median2, std2)
@@ -212,9 +168,6 @@ for fit_file in fl:
     else:
         ph_image = data
         data = substract(data, value=median)
-        if sflat:
-            data = data * np.mean(flat) / flat
-            ph_image = ph_image * np.mean(flat) / flat
 
     # data = data - median
 
@@ -246,8 +199,12 @@ for fit_file in fl:
         target.append(error[0])
         target.append(error[1])
 
-        fig_name = path + "//fig//" + fit_file + "_man.png"
-        target = fit_m(data, x0, y0, gate=gate2, debug=debug, fig_name=fig_name, centring=True)
+        try:
+            fig_name = path + "//fig//" + fit_file + "_man.png"
+            target = fit_m(data, x0, y0, gate=gate2, debug=debug, fig_name=fig_name, centring=True)
+        except Exception as E:
+            print(E)
+            print("Error - curve_fit failed\n")
 
     else:  # SEARCH target
         target = None
@@ -282,6 +239,7 @@ for fit_file in fl:
             print("Error - curve_fit failed\n")
 
     # ------------------------------------ PHOTOMETRY-------------------------------------------------
+    # print(target)
     if (target) and (target[2] < 2):  # and (target[-1] > min_signal):
         positions = target[:2]
         aperture = CircularAperture(positions, r=r_ap)
@@ -293,7 +251,7 @@ for fit_file in fl:
 
         # -------------------------------------------------------------
         # bgr_aperture = CircularAperture(positions, r=an_in)
-        phot_table = iraf_style_photometry(aperture, annulus_aperture, ph_image)
+        phot_table = iraf_style_photometry(aperture, annulus_aperture, ph_image, bg_method='mean')
         #-----------------------------------------------------------------------
 
         # for col in phot_table.colnames:
@@ -339,6 +297,7 @@ for fit_file in fl:
         # flux = phot_table['residual_aperture_sum'][z]
 
         flux = phot_table['flux'][0]
+        # print (flux)
         # print(type(flux))
         flux_err = phot_table['flux_error'][0]
         mag = phot_table['mag']
@@ -352,8 +311,9 @@ for fit_file in fl:
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
-        fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s  %s   %6.3f  %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
-            (date, time[:12], phot_table['X'][0], phot_table['Y'][0], xerr, yerr, '{:13.4f}'.format(flux), '{:8.4f}'.format(flux_err),  mag, mag_err, Az, El, Rg, fit_file))
+        if mag < 15:
+	        fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s  %s   %6.3f  %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
+	            (date, time[:12], phot_table['X'][0], phot_table['Y'][0], xerr, yerr, '{:13.4f}'.format(flux), '{:8.4f}'.format(flux_err),  mag, mag_err, Az, El, Rg, fit_file))
 
         # PLOT GENERAL FIT with apperture
         # import matplotlib.pyplot as plt

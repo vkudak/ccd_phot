@@ -1,4 +1,4 @@
-# ccd_phot
+# ccd_stat_phot
 Photometry of artificial satellites with CCD QHY-174M
 
 Python scripts to process photometry obtained on CCD QHY-174M

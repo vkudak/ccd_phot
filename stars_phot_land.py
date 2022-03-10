@@ -110,8 +110,7 @@ if os.path.isfile(path + '//config_stars.ini'):
         kr = config['Stars_Stand']['K']
         kr = float(kr)
         max_m = config['Stars_Stand']['max_m']
-        rms_val = config['Stars_Stand'].getfloat('A_rms')
-        r_max_val = config['Stars_Stand'].getfloat('r_max_val')
+        rms_val = float(config['Stars_Stand']['A_rms'])
         c_flag = config['Stars_Stand'].getboolean('calc_C')
         snr_value = config['Stars_Stand'].getfloat('snr')
         if not c_flag:
@@ -126,7 +125,6 @@ if os.path.isfile(path + '//config_stars.ini'):
         r_ap = float(config['APERTURE']['r_ap'])
         an_in = float(config['APERTURE']['an_in'])
         an_out = float(config['APERTURE']['an_out'])
-        gate = config['APERTURE'].getint('gate')
 
     except Exception as E:
         print("Error in inin file\n", E)
@@ -279,9 +277,9 @@ for fit_file in fl:
     y_ar, x_ar = [], []
     star_count = 0
     if not c_flag:
-        log_file.write("   SimbadName         Vmag       Rmag         Flux         A        Mz         X           Y       R2     fwhm      Amp\n")
+        log_file.write("   SimbadName         Vmag       Rmag         Flux         A        Mz         X           Y\n")
     else:
-        log_file.write("   SimbadName         Vmag       Rmag      V-R            Flux       Flux_err     bkg          snr      Mz       X         Y       R2     fwhm      Amp\n")
+        log_file.write("   SimbadName         Vmag       Rmag      V-R            Flux       Flux_err     bkg          snr      Mz       X         Y\n")
     # "1790-0005788      6.353     5.470    2482736.51558   22.51300  1.31407  894.32825   121.83167"
     for row in table_res:
         if (row["Rmag"] is not None) and (row["Vmag"] is not None):
@@ -307,7 +305,7 @@ for fit_file in fl:
                     # targ_star = fit_m(image_tmp, int(xs), int(ys), gate=10, debug=True, fig_name=str(row["Rmag"]) + "_t.png", centring=True)
                     # targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=False, centring=False, silent=True)
                     figname = "D:\\FTP\\fig.png"
-                    targ_star = fit_moff(image_tmp, int(xs), int(ys), gate=gate, debug=False, fig_name=figname, centring=True, silent=True)
+                    targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=False, fig_name=figname, centring=True, silent=True)
 
                     positions = targ_star[:2]
                     aperture = CircularAperture(positions, r=r_ap)
@@ -342,8 +340,7 @@ for fit_file in fl:
                     star = ephem.FixedBody()
                     star._ra = ephem.degrees(str(ra_s))
                     star._dec = ephem.degrees(str(dec_s))
-                    station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")  # QHY
-                    # station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S")      # T400
+                    station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
                     star.compute(station)
                     el = star.alt  # in radians !!!!!!!!
                     Mz = 1 / (math.cos(math.pi / 2 - el))
@@ -364,17 +361,12 @@ for fit_file in fl:
                             Mzs = str.format("{0:" ">3.3f}", Mz)
                             xxs = str.format("{0:" ">8.3f}", xx)
                             yys = str.format("{0:" ">8.3f}", yy)
-
-                            amps = str.format("{0:" ">5n}", int(targ_star[-1]))
-                            fwhms = str.format("{0:" ">2.3f}", targ_star[2])
-                            Rsqs = str.format("{0:" ">1.3f}", targ_star[3])
-
                             if snr < snr_value:  # print "*" on bed star
-                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s*  %5s %8s %8s  %5s %8s %8s\n" %
-                                               (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys, Rsqs, fwhms, amps))
+                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s*  %5s %8s %8s\n" %
+                                               (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                             else:
-                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s   %5s %8s %8s  %5s %8s %8s\n" %
-                                               (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys, Rsqs, fwhms, amps))
+                                log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s   %5s %8s %8s\n" %
+                                               (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                         else:
                             m_inst = -2.5 * math.log10(flux)
                             A = row["Rmag"] - m_inst + kr * Mz - Cr * vmr  # <------------------ A
@@ -440,11 +432,11 @@ for fit_file in fl:
                             #     star_e["A"] = np.array([A])
                             database.append(star_e)
                 except Exception as e:
-                    # # except Exception as e:
-                    print(str(e))
-                    # print(row["SimbadName"], "Fail fit Gauss...")
-                    # log_file.write('%17s fail in Gauss fit\n' % row["SimbadName"])
-                    # pass
+                    # except Exception as e:
+                    # print(str(e))
+                    print(row["SimbadName"], "Fail fit Gauss...")
+                    log_file.write('%17s fail in Gauss fit\n' % row["SimbadName"])
+                    pass
 
 log_file.write("\n\n")
 print("Stars = ", len(database))
@@ -461,18 +453,23 @@ frf = open("test.txt", "w")
 frfxy = open("test_xy.txt", "w")
 
 for i in range(len(database)):
-    # RMS filter############################### rms < 3 sigma ##############################
+    # RMS filter#############################################################
     dd = True
     while dd:
         database[i]["Flux_mean"] = database[i]["Flux"].mean(axis=0)
         database[i]["Flux_std"] = database[i]["Flux"].std(axis=0)
-        database[i]["Flux-mean"] = abs(database[i]["Flux"] - database[i]["Flux_mean"])
 
-        az = np.nonzero(database[i]["Flux-mean"] > 3 * database[i]["Flux"].std(axis=0))[0]
+        database[i]["Flux-mean"] = abs(database[i]["Flux"] - database[i]["Flux_mean"])
+        az = []
+        for z in range(len(database[i]["Flux"])):
+            if database[i]["Flux-mean"][z] > 3 * database[i]["Flux"].std(axis=0):
+                az.append(z)
+
         if len(az) > 0:
             f = np.array(database[i]["Flux"])
             print(database[i]["SimbadName"], "delete..", az)
-            log_file.write("Star %12s delete value with index %3s\n" % (database[i]["SimbadName"], str(az)))
+            log_file.write(database[i]["SimbadName"] + " delete.. " + str(az))
+            log_file.write("\n")
             f = np.delete(f, az)
             database[i]["Flux"] = f
             database[i]["Flux_mean"] = database[i]["Flux"].mean(axis=0)
@@ -483,34 +480,21 @@ for i in range(len(database)):
             dd = True
         else:
             dd = False
-    # # filter snr ############################### snr < snr_value ###
-    # for zz in range(len(database)):
-    #     bed_ind = np.nonzero(database[zz]["f/b"] < snr_value)[0]
-    #     if len(bed_ind) > 0:
-    #         log_file.write("Star %12s delete value with low SNR index - %3s\n" % (database[zz]["SimbadName"], str(az)))
-    #         f = np.array(database[zz]["Flux"])
-    #         snr_tmp = database[zz]["f/b"]
-    #         f = np.delete(f, bed_ind)
-    #         snr_tmp = np.delete(snr_tmp, bed_ind)
-    #         database[zz]["Flux"] = f
-    #         database[zz]["f/b"] = snr_tmp
-    #         database[zz]["Flux_mean"] = database[zz]["Flux"].mean(axis=0)
-    #         database[zz]["Flux_std"] = database[zz]["Flux"].std(axis=0)
-    # # ###########################################################
+    #############################################################
 
-    fi = np.array(2.5 * np.log10(database[i]["Flux"]))
-    database[i]["m_err"] = fi.std(axis=0)
-    exp = float(exp)
-    m_inst = -2.5 * math.log10(database[i]["Flux_mean"] / exp)
-    yq = database[i]["Rmag"] - m_inst + kr * database[i]["Mz"]
-    database[i]["yq"] = yq
+    # print (database[i]["NOMAD1"], database[i]["Flux_mean"], database[i]["Flux_std"])
+    if (database[i]["Flux_mean"] > 0) and (abs(database[i]["V-R"]) < 0.95) and (len(database[i]["Flux"]) > 7):
+        m_inst = -2.5 * math.log10(database[i]["Flux_mean"])
 
-    if (database[i]["Flux_mean"] > 0) and (abs(database[i]["V-R"]) < 0.89) and (len(database[i]["Flux"]) > 7):
         if c_flag:
+            # yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
+            yq = database[i]["Rmag"] - m_inst + kr * database[i]["Mz"]
             # if (yq < 17) and (yq > 14) and (database[i]["f/b"].mean(axis=0) > snr_value):
             if (database[i]["f/b"].mean(axis=0) > snr_value):
+                database[i]["yq"] = yq
                 y_ar.append(database[i]["yq"])
                 x_ar.append(database[i]["V-R"])
+                fi = np.array(2.5 * np.log10(database[i]["Flux"]))
                 yerr_ar.append(fi.std(axis=0))  # std from  2.5 * log10(Flux)
                 l_ar.append(database[i]["SimbadName"])
 
@@ -521,7 +505,7 @@ for i in range(len(database)):
             else:
                 database[i]["Good"] = "low s/n"
 
-        else:  # A calc
+        else:
             database[i]["A"] = database[i]["Rmag"] - m_inst + kr * database[i]["Mz"] - Cr * database[i]["V-R"]
             if database[i]["f/b"].mean(axis=0) > snr_value:
                 A_m_list.append(database[i]["A"])
@@ -552,33 +536,38 @@ if c_flag:
 
     r_max = 999
     r_max_val = 0.25
-    print("############################LSQ_FIT Results#################################")
-    log_file.write("###--------LSQ_FIT Results--(A and Cr all frames)----------------###\n")
     while (r_max > r_max_val) and (len(y_ar) > 5):
         # if len(y_ar) > 5:
+        c, a, r_max, ind, r2 = lsqFit(y_ar, x_ar)
+        c_err = 99
+        a_err = 99
 
-        # c, a, r_max, ind, r2 = lsqFit(y_ar, x_ar)
-        # c_err = 99
-        # a_err = 99
+        # # with errors
+        # aa, bb, r2, r_max, ind = fit_lin_reg(x_ar, y_ar, yerr_ar)
+        # c, c_err = aa
+        # a, a_err = bb
+        # ####################
 
-        # with errors
-        aa, bb, r2, r_max, ind = fit_lin_reg(x_ar, y_ar, yerr=yerr_ar)
-        # aa, bb, r2, r_max, ind = fit_lin_reg(x_ar, y_ar)
-        c, c_err = aa
-        a, a_err = bb
-        ####################
         # a2, c2, r_sq = linReg(x_ar, y_ar)
         c_fit = c
+        # if c < 0:
+        #     c = 1.0 / c
+        # print("A=%5.3f  Cr=%5.3f  R^2=%5.3f" % (a2, c2, r_sq))
+        # c = c2
+
         lya_v = 547
         lya_r = 635
         lya_eff = (lya_r * lya_v) / (c * (lya_v - lya_r) + lya_v)
-        print("A = %2.5f +/- %2.5f, c = %2.5f +/- %2.5f    R^2=%2.3f  Lyambda_eff = %5.3f" % (a, a_err, c, c_err, r2, lya_eff))
+        print("############################LSQ_FIT Results#################################")
+        print("A = %2.5f +/- %2.5f, c = %2.5f +/- %2.5f" % (a, a_err, c, c_err))
+        print("Lyambda_eff = %5.3f" % lya_eff)
         # log_file.write("A = %3.8f  c = %3.8f\n" % (a, c))
 
-        # plt.plot(x_ar, y_ar, "xr")
-        plt.errorbar(x_ar, y_ar, yerr=yerr_ar, fmt="xr", capsize=2, linewidth=1)
+        plt.plot(x_ar, y_ar, "xr")
         p1 = [min(x_ar), max(x_ar)]
         p2 = [a + c_fit * min(x_ar), a + c_fit * max(x_ar)]
+        # print(p1)
+        # print(p2)
         plt.plot(p1, p2, "k")
         plt.xlabel("V-R")
         plt.ylabel(r'$m_{st}+2.5 \cdot log(Flux)+K_{r} \cdot M_{z}$')
@@ -587,8 +576,12 @@ if c_flag:
         plt.savefig("graph_Cr" + ".png")
         plt.close()
 
-        # log_file.write("\n")
-        log_file.write("A = %3.5f +/- %3.5f, c = %3.5f +/- %3.5f   R^2=%2.3f     Lyambda_eff = %5.3f nm    " % (a, a_err, c, c_err, r2, lya_eff))
+        log_file.write("\n\n")
+        log_file.write("####################################################################\n")
+        log_file.write("###--------LSQ_FIT Results--(A and Cr all frames)----------------###\n")
+        log_file.write("A = %3.5f +/- %3.5f, c = %3.5f +/- %3.5f   R^2=%2.3f\n" % (a, a_err, c, c_err, r2))
+        log_file.write("Lyambda_eff = %5.3f nm\n" % lya_eff)
+        log_file.write("###--------------------------------------------------------------###\n")
         if r_max > r_max_val:
             y_ar = np.delete(y_ar, ind)
             x_ar = np.delete(x_ar, ind)
@@ -596,28 +589,30 @@ if c_flag:
             for i in range(len(database)):
                 if database[i]["SimbadName"] == l_ar[ind]:
                     database[i]["Good"] = "Filtered %i r_max= %2.5f" % (ind, r_max)
-            log_file.write("## Del element ind = %3i, name = %12s, rmax = %5.3f\n" % (ind, l_ar[ind], r_max))
+            log_file.write("## rmax=%5.3f  ind=%i, name = %s\n" % (r_max, ind, l_ar[ind]))
             l_ar = np.delete(l_ar, ind)
-        else:
-            log_file.write("r_max = %2.3f < limit = %2.3f\n" % (r_max, r_max_val))
+        # else:
+        #     print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
+        #     log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
     if r_max > r_max_val:
-        print("Only %i values. Cand perform least-squares FIT...END" % len(y_ar))
-        log_file.write("Only %i values. Cand perform least-squares FIT...END\n" % len(y_ar))
-        sys.exit()
+        print("Only %i values. Cand perform LSQ_FIT...skipping filtering" % len(y_ar))
+        log_file.write("Only %i values. Cand perform LSQ_FIT...skipping filtering\n" % len(y_ar))
 
     # ### Write stars data
     log_file.write("######################--STARS  DATA--###################################\n")
-    log_file.write("SimbadName          Vmag   Rmag    V-R      Flux_mean      Flux_std      yq     m_err  n_count  (f/b)_maen    Mz     Note\n")
+    log_file.write("SimbadName          Vmag   Rmag    V-R      Flux_mean      Flux_std   n_count  (f/b)_maen    Mz     Note\n")
     for star in database:
-        log_file.write("{:17s}  {:{width}.{prec}f}  {:{width}.{prec}f}   {:{width}.{prec}f}  {:{width2}.{prec2}f}  {:{width2}.{prec2}f}     {:{width}.{prec}f}  {:{width}.{prec}f}  {:{width}d}       {:{width}.{prec}f}     {:{width}.{prec}f}    {:7s}\n".format(
+        # log_file.write("%17s  %5.3f  %5.3f  % 2.3f     %8.3f   %5.3f    %i         %2.3f     %2.3f    %s\n" %
+        #                (star["SimbadName"], star["Vmag"], star["Rmag"], star["V-R"], star["Flux_mean"], star["Flux_std"],
+        #                 len(star["Flux"]), star["f/b"].mean(axis=0), star["Mz"], star["Good"]))
+
+        log_file.write("{:17s}  {:{width}.{prec}f}  {:{width}.{prec}f}   {:{width}.{prec}f}  {:{width2}.{prec2}f}  {:{width2}.{prec2}f}  {:{width}d}       {:{width}.{prec}f}     {:{width}.{prec}f}    {:7s}\n".format(
                        star["SimbadName"],
                        star["Vmag"],
                        star["Rmag"],
                        star["V-R"],
                        star["Flux_mean"],
                        star["Flux_std"],
-                       star["yq"],
-                       star["m_err"],
                        len(star["Flux"]),
                        star["f/b"].mean(axis=0),
                        star["Mz"],
@@ -626,7 +621,7 @@ if c_flag:
     #####################
     # '{:{width}.{prec}f}'.format(2.7182, width=5, prec=2)
 
-else:  # A_calc
+else:
     plt.plot(A_mR_list, A_m_list, "xr")
     plt.xlabel(r'$m_R$')
     plt.ylabel("A")
