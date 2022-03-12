@@ -312,8 +312,8 @@ for fit_file in fl:
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
         if mag < 15:
-	        fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s  %s   %6.3f  %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
-	            (date, time[:12], phot_table['X'][0], phot_table['Y'][0], xerr, yerr, '{:13.4f}'.format(flux), '{:8.4f}'.format(flux_err),  mag, mag_err, Az, El, Rg, fit_file))
+            fr.write(
+                f"{date} {time[:12]}    {phot_table['X'][0]:8.5f}  {phot_table['Y'][0]:8.5f}  {xerr:8.5f}  {yerr:8.5f}     {'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    {Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
 
         # PLOT GENERAL FIT with apperture
         # import matplotlib.pyplot as plt
