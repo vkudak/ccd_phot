@@ -51,7 +51,7 @@ if os.path.isfile(path + '//config_sat.ini'):
         A = float(config['STD']['A'])
         k = float(config['STD']['k'])
         gate = int(config['STD']['gate'])
-        Filter = config['STD']['R']
+        Filter = config['STD']['Filter']
 
         try:
             dark_frame = config['STD']['dark_frame']
