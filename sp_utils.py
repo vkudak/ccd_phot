@@ -280,7 +280,7 @@ def get_tle(tle_path):
     return TLE_list
 
 
-def calc_from_tle(TLE_list, date_time, COSPAR, NORAD, NAME):
+def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
     if COSPAR == '' and NORAD == '' and NAME == '':
         return None
     else:
@@ -318,14 +318,17 @@ def calc_from_tle(TLE_list, date_time, COSPAR, NORAD, NAME):
             if len(tle) > 0:
                 # Calculating  El, Rg
                 station = ephem.Observer()
-                station.lat = '48.5635505'
-                station.long = '22.453751'
-                station.elevation = 231.1325
+                station.lat = lat
+                station.long = lon
+                station.elevation = elev
+                # station.lat = '48.5635505'
+                # station.long = '22.453751'
+                # station.elevation = 231.1325
                 sat = ephem.readtle(tle[0], tle[1], tle[2])
                 try:
                     station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
                 except Exception:
-                    print ("Error - Wrong date time format...")
+                    print("Error - Wrong date time format...")
 
                 sat.compute(station)
                 el = math.degrees(sat.alt)

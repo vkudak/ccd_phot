@@ -62,6 +62,11 @@ if os.path.isfile(path + '//config_sat.ini'):
         an_in = float(config['APERTURE']['an_in'])
         an_out = float(config['APERTURE']['an_out'])
 
+        lat = config['SITE']['lat']
+        lon = config['SITE']['lon']
+        elev = float(config['SITE']['h'])
+
+
     except Exception as E:
         print("Error in inin file\n", E)
         sys.exit()
@@ -133,7 +138,7 @@ for fit_file in fl:
     # print (mean, median, std)
 
     if fit_file == fl[0]:  # make header--------------------------------------------------------------------
-        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(tle_list, date_time, cospar, norad, name)
+        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(lat, lon, elev, tle_list, date_time, cospar, norad, name)
         fr.write("# TLE:\n")
         fr.write("# %s\n" % tle_lines[0])
         fr.write("# %s\n" % tle_lines[1])
@@ -306,7 +311,7 @@ for fit_file in fl:
         # print(phot_table['residual_aperture_sum'])
         # print (phot_table)
 
-        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(tle_list, date_time, cospar, norad, name)
+        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(lat, lon, elev, tle_list, date_time, cospar, norad, name)
         mag = calc_mag(flux, El, Rg, A, k)
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %

@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
+import configparser
 
 filename = sys.argv[1]
 import os
@@ -11,7 +12,18 @@ wd = os.path.dirname(filename)
 # print(wd)
 
 
-filt = "R"
+config = configparser.ConfigParser()
+config.read(os.path.join(wd, 'config_sat.ini'))
+try:
+	filt = config['STD']['Filter']
+	filt = filt.strip("\n")
+	filt = filt.strip("\t")
+	filt = filt.strip("\r")
+except Exception as e:
+	print(e)
+	filt = "None"
+	pass
+
 
 def read_name(filename):
 	cospar = "none"
@@ -49,7 +61,7 @@ date, time = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(0, 1), dtyp
 
 date_time = []
 for i in range(0, len(date)):
-    date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
+	date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
 
 # print (date_time[2])
 
@@ -62,7 +74,7 @@ plt.plot(date_time, mR, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
-plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=8, fontsize=12)
+plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=6, fontsize=12)
 plt.ylabel('m_st')
 plt.xlabel('UT')
 ax = plt.gca()
@@ -80,11 +92,11 @@ El2 = np.array(El)
 Az2s = []
 Tt2s = []
 for kk in range(0, len(Az2)):
-    azt = Az2[kk]
-    elt = El2[kk]
-    t = Tt2[kk]
-    Az2s.append("%3.1f; %3.1f"%(azt, elt))
-    Tt2s.append(t.strftime("%H:%M:%S"))
+	azt = Az2[kk]
+	elt = El2[kk]
+	t = Tt2[kk]
+	Az2s.append("%3.1f; %3.1f"%(azt, elt))
+	Tt2s.append(t.strftime("%H:%M:%S"))
 Az2s = np.array(Az2s)
 ax2.set_xticks(Tt2[tt_idx])  # new_tick_locations
 ax2.set_xticklabels(Az2s[tt_idx], fontsize=8)
@@ -121,7 +133,7 @@ plt.plot(date_time, flux, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
-plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=8, fontsize=12)
+plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=6, fontsize=12)
 plt.ylabel('Flux')
 plt.xlabel('UT')
 ax = plt.gca()
