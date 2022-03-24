@@ -50,6 +50,7 @@ def read_name(filename):
 
 
 cospar, norad, name, dt = read_name(filename)
+dt = float(dt)
 # print(cospar, norad, name, dt)
 
 
@@ -74,7 +75,7 @@ plt.plot(date_time, mR, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
-plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=6, fontsize=12)
+plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%2.3f  Filter=%s" % (name, norad, cospar, d, t, dt, filt), pad=6, fontsize=12)
 plt.ylabel('m_st')
 plt.xlabel('UT')
 ax = plt.gca()
@@ -133,7 +134,7 @@ plt.plot(date_time, flux, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
-plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (name, norad, cospar, d, t, str(dt), filt), pad=6, fontsize=12)
+plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%2.3f  Filter=%s" % (name, norad, cospar, d, t, dt, filt), pad=6, fontsize=12)
 plt.ylabel('Flux')
 plt.xlabel('UT')
 ax = plt.gca()
