@@ -164,7 +164,7 @@ for fit_file in fl:
         fr.write("# SITE_ELEV  = %s\n" % site_elev)
 
 
-        fr.write("   Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err     magR  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
+        fr.write("#  Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err     magR  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
 
     ##################################
 

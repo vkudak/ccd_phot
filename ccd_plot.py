@@ -15,38 +15,38 @@ wd = os.path.dirname(filename)
 config = configparser.ConfigParser()
 config.read(os.path.join(wd, 'config_sat.ini'))
 try:
-	filt = config['STD']['Filter']
-	filt = filt.strip("\n")
-	filt = filt.strip("\t")
-	filt = filt.strip("\r")
+    filt = config['STD']['Filter']
+    filt = filt.strip("\n")
+    filt = filt.strip("\t")
+    filt = filt.strip("\r")
 except Exception as e:
-	print(e)
-	filt = "None"
-	pass
+    print(e)
+    filt = "None"
+    pass
 
 
 def read_name(filename):
-	cospar = "none"
-	norad = "none"
-	name = "none"
-	dt = "none"
+    cospar = "none"
+    norad = "none"
+    name = "none"
+    dt = "none"
 
-	with open(filename) as myfile:
-		head = [next(myfile) for x in range(10)]
-	# print(head)
-	# print("---------------------------------"
-	for line in head:
-		line = line.split()
-		# print (line)
-		if line[1].strip() == "COSPAR":
-			cospar = line[3]
-		if line[1].strip() == "NORAD":
-			norad = line[3]
-		if line[1].strip() == "NAME":
-			name = " ".join(line[3:])
-		if line[1].strip() == "dt":
-			dt = line[3]
-	return cospar, norad, name, dt
+    with open(filename) as myfile:
+        head = [next(myfile) for x in range(10)]
+    # print(head)
+    # print("---------------------------------"
+    for line in head:
+        line = line.split()
+        # print (line)
+        if line[1].strip() == "COSPAR":
+            cospar = line[3]
+        if line[1].strip() == "NORAD":
+            norad = line[3]
+        if line[1].strip() == "NAME":
+            name = " ".join(line[3:])
+        if line[1].strip() == "dt":
+            dt = line[3]
+    return cospar, norad, name, dt
 
 
 cospar, norad, name, dt = read_name(filename)
@@ -54,15 +54,19 @@ dt = float(dt)
 # print(cospar, norad, name, dt)
 
 
+flux, mR, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(6, 8, 10, 11), unpack=True)
+date, time = np.genfromtxt(filename, unpack=True, skip_header=True, usecols=(0, 1), dtype=None, encoding="utf-8")
+# print(date)
 
-flux, mR, Az, El = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(6, 8, 10, 11))
-date, time = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(0, 1), dtype={'names': ('date', 'time'), 'formats': ('S10', 'S12')})
+# old style (working!!!!)
+# flux, mR, Az, El = np.loadtxt(filename, unpack=True, usecols=(6, 8, 10, 11))
+# date, time = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(0, 1), dtype={'names': ('date', 'time'), 'formats': ('S10', 'S12')})
 
-# print (flux[0], mR[0])
 
 date_time = []
 for i in range(0, len(date)):
-	date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
+    # date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
+    date_time.append(datetime.strptime(date[i] + ' ' + time[i] + "000", "%Y-%m-%d %H:%M:%S.%f"))
 
 # print (date_time[2])
 
@@ -93,11 +97,11 @@ El2 = np.array(El)
 Az2s = []
 Tt2s = []
 for kk in range(0, len(Az2)):
-	azt = Az2[kk]
-	elt = El2[kk]
-	t = Tt2[kk]
-	Az2s.append("%3.1f; %3.1f"%(azt, elt))
-	Tt2s.append(t.strftime("%H:%M:%S"))
+    azt = Az2[kk]
+    elt = El2[kk]
+    t = Tt2[kk]
+    Az2s.append("%3.1f; %3.1f"%(azt, elt))
+    Tt2s.append(t.strftime("%H:%M:%S"))
 Az2s = np.array(Az2s)
 ax2.set_xticks(Tt2[tt_idx])  # new_tick_locations
 ax2.set_xticklabels(Az2s[tt_idx], fontsize=8)
