@@ -62,9 +62,10 @@ if os.path.isfile(path + '//config_sat.ini'):
         an_in = float(config['APERTURE']['an_in'])
         an_out = float(config['APERTURE']['an_out'])
 
-        lat = config['SITE']['lat']
-        lon = config['SITE']['lon']
-        elev = float(config['SITE']['h'])
+        site_name = config['SITE']['Name']
+        site_lat = config['SITE']['lat']
+        site_lon = config['SITE']['lon']
+        site_elev = float(config['SITE']['h'])
 
 
     except Exception as E:
@@ -138,7 +139,7 @@ for fit_file in fl:
     # print (mean, median, std)
 
     if fit_file == fl[0]:  # make header--------------------------------------------------------------------
-        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(lat, lon, elev, tle_list, date_time, cospar, norad, name)
+        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(site_lat, site_lon, site_elev, tle_list, date_time, cospar, norad, name)
         fr.write("# TLE:\n")
         fr.write("# %s\n" % tle_lines[0])
         fr.write("# %s\n" % tle_lines[1])
@@ -156,6 +157,12 @@ for fit_file in fl:
         fr.write("# COSPAR = %s\n" % cosp)
         fr.write("# NORAD  = %s\n" % nor)
         fr.write("# NAME   = %s\n" % name)
+
+        fr.write("# SITE_NAME   = %s\n" % site_name)
+        fr.write("# SITE_LAT   = %s\n" % site_lat)
+        fr.write("# SITE_LON   = %s\n" % site_lon)
+        fr.write("# SITE_ELEV  = %s\n" % site_elev)
+
 
         fr.write("   Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err     magR  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
 
@@ -311,7 +318,7 @@ for fit_file in fl:
         # print(phot_table['residual_aperture_sum'])
         # print (phot_table)
 
-        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(lat, lon, elev, tle_list, date_time, cospar, norad, name)
+        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(site_lat, site_lon, site_elev, tle_list, date_time, cospar, norad, name)
         mag = calc_mag(flux, El, Rg, A, k)
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
