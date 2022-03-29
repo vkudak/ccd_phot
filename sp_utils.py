@@ -4,6 +4,8 @@ import os
 # from astropy.stats import mad_std
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib.patches import Circle
 import ephem
 from datetime import datetime
@@ -220,11 +222,12 @@ def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=Fals
     # plt.show()
     if centring:
         if not silent:
-            print("centring...")
+            print("centring...", end=" ")
         # ------------------------------------------------------------------ find brighter pixel and center it!!!!
         bx0, by0 = np.unravel_index(data_fit.argmax(), data_fit.shape)
         if not silent:
-            print("bx, by=", bx0, by0)
+            # print("bx, by=", bx0, by0)
+            print(f"bx, by = {bx0:d},{by0:d}")
 
         sx = by0 - gate
         sy = bx0 - gate

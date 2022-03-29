@@ -12,6 +12,8 @@ import sys
 import os
 import configparser
 import warnings
+# import matplotlib
+# matplotlib.use('Agg')
 
 
 def calc_mag(flux, el, rg, A, k):
@@ -115,7 +117,7 @@ else:
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
 
 for fit_file in fl:
-    print("filename=", fit_file)
+    print("filename = " + fit_file, end=" ")
     # hdu = fits.open(path + "//" + fit_file)[0]
     # data = hdu.data
     # header = hdu.header
@@ -244,7 +246,7 @@ for fit_file in fl:
                 x0, y0 = int(target[0]), int(target[1])
             else:
                 x0, y0 = int(target[0]), int(target[1])
-            print ("final=", x0, y0)
+            print(f"final = {x0:d},{y0:d}") #x0, y0)
 
         except Exception as E:
             print(E)
@@ -319,6 +321,8 @@ for fit_file in fl:
         # print (phot_table)
 
         El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(site_lat, site_lon, site_elev, tle_list, date_time, cospar, norad, name)
+        if El < 5:
+            print("WARNING! Elevation of satellite < 5 deg. Check settings!")
         mag = calc_mag(flux, El, Rg, A, k)
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
@@ -326,7 +330,8 @@ for fit_file in fl:
         if mag < 15:
             fr.write(
                 f"{date} {time[:12]}    {phot_table['X'][0]:8.5f}  {phot_table['Y'][0]:8.5f}  {xerr:8.5f}  {yerr:8.5f}     {'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    {Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
-
+        else:
+            print("WARNING! mag value < 15 mag, skipping this value!")
         # PLOT GENERAL FIT with apperture
         # import matplotlib.pyplot as plt
         # from matplotlib.patches import Circle
