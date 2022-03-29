@@ -96,7 +96,7 @@ if debug:
     else:
         os.makedirs(path + "//fig")
 
-# fl = fl[996:]   # first 10 files  ------  file # -1
+# fl = fl[:10]   # first 10 files  ------  file # -1
 # fl = ["Capture_00016.fits"]
 
 # get TIME from first FIT file
@@ -105,7 +105,7 @@ date_time = header.get('DATE-OBS')
 if date_time == '0001-01-01T00:00:00.0000000':
     date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
 ut1 = date_time.split("T")[1]
-ut1 = ut1[:2] + ut1[3:5]
+ut1 = ut1[:2] + ut1[3:5] + ut1[6:8]
 ##############
 
 if norad != "":

@@ -119,7 +119,7 @@ ax.yaxis.grid()
 # plt.show()
 Tf = Tt2s[0]
 Tf = Tf.split(":")
-TF = Tf[0]+Tf[1]
+TF = Tf[0]+Tf[1]+Tf[2]
 
 figname = os.path.join(wd, norad + "_UT" + TF + ".png")
 # plt.savefig(norad + "_UT" + TF + ".png")
