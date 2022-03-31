@@ -14,3 +14,4 @@ Based on:
 2. prepeare comfig_sat.ini in same directory where fits files are located
 3. start sat_phot.py with path to fits files as parameter ("sat_phot.py . " OR "sat_phot.py c:\test" )
 4. make result plot "ccd_plot.py path to result_file.txt"
+5. Done :)
