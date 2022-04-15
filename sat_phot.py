@@ -22,7 +22,7 @@ def calc_mag(flux, el, rg, A, k):
         mag = 15.0
         return mag
     else:
-        m_inst = -2.5 * math.log10(flux)
+        m_inst = -2.5 * math.log10(flux/exp)
         mz = 1 / (math.cos(math.pi / 2 - math.radians(el)))  # 1/cos(90-el)
         mr = -5 * math.log10(rg / 1000.0)
         mzr = k * mz
@@ -116,6 +116,7 @@ else:
     fr = open(path + "//result" + "_UT" + ut1 + ".ph" + Filter, "w")
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
 
+# from tqdm.auto import tqdm
 for fit_file in fl:
     print("filename = " + fit_file, end=" ")
     # hdu = fits.open(path + "//" + fit_file)[0]
@@ -125,6 +126,8 @@ for fit_file in fl:
     header = fits.getheader(path + "//" + fit_file)
 
     date_time = header.get('DATE-OBS')
+    exp = header.get('EXPTIME')
+    exp = float(exp)
     if date_time == '0001-01-01T00:00:00.0000000':
         date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
     width = int(header.get('NAXIS1'))

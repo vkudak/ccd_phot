@@ -76,7 +76,7 @@ def RMS_del(A, value, B=None):
 
 
 if len(sys.argv) < 2:
-    print("Not enouth parameters. Enter path")
+    print("Not enough parameters. Enter path")
     sys.exit()
 
 
@@ -241,6 +241,8 @@ for fit_file in fl:
 
     xc = header["NAXIS1"] / 2.
     yc = header["NAXIS2"] / 2.
+    exp = header["EXPTIME"]
+    exp = float(exp)
 
     w = WCS(header)
     ra_c, dec_c = w.wcs_pix2world(xc, yc, 1)  # RA DEC of FRAME center
@@ -347,7 +349,7 @@ for fit_file in fl:
 
                     if (flux > 0) and (vmr is not masked) and (abs(row["Rmag"] - row["Vmag"]) < 2):
                         if c_flag:
-                            m_inst = -2.5 * math.log10(flux)
+                            m_inst = -2.5 * math.log10(flux/exp)
                             yq = row["Rmag"] - m_inst + kr * Mz
                             if (snr > snr_value):
                                 y_ar.append(yq)
@@ -368,7 +370,7 @@ for fit_file in fl:
                                 log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s   %5s %8s %8s\n" %
                                                (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                         else:
-                            m_inst = -2.5 * math.log10(flux)
+                            m_inst = -2.5 * math.log10(flux/exp)
                             A = row["Rmag"] - m_inst + kr * Mz - Cr * vmr  # <------------------ A
                             A_list.append(A)
 
@@ -484,7 +486,7 @@ for i in range(len(database)):
 
     # print (database[i]["NOMAD1"], database[i]["Flux_mean"], database[i]["Flux_std"])
     if (database[i]["Flux_mean"] > 0) and (abs(database[i]["V-R"]) < 0.95) and (len(database[i]["Flux"]) > 7):
-        m_inst = -2.5 * math.log10(database[i]["Flux_mean"])
+        m_inst = -2.5 * math.log10(database[i]["Flux_mean"]/exp)
 
         if c_flag:
             # yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
