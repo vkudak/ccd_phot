@@ -22,7 +22,8 @@ import configparser
 import warnings
 from photometry_with_errors import *
 import pickle
-
+# !!!! http://vizier.u-strasbg.fr/viz-bin/VizieR-4
+# Stellar Photometry in Johnson's 11-color system (Ducati, 2002)
 
 def RMS_del(A, value, B=None):
     '''Delete elements of array A until A.RMS>value'''
@@ -66,6 +67,7 @@ try:
     db_file = sys.argv[1]
     database, exp = pickle.load(open(db_file, "rb"))
 except Exception as E:
+    print("Error fileread", db_file)
     print(repr(E))
     sys.exit()
 
@@ -103,6 +105,7 @@ if os.path.isfile(path + '//config_stars.ini'):
         an_out = float(config['APERTURE']['an_out'])
 
     except Exception as E:
+        print(repr(E))
         print("Error in in file\n", E)
         sys.exit()
 else:
