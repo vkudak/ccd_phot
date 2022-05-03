@@ -108,12 +108,14 @@ if date_time == '0001-01-01T00:00:00.0000000':
     date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
 ut1 = date_time.split("T")[1]
 ut1 = ut1[:2] + ut1[3:5] + ut1[6:8]
+ymd = date_time.split("T")[0]
+ymd = ymd.replace("-", "")
 ##############
 
 if norad != "":
-    fr = open(path + "//result_" + norad + "_UT" + ut1 + ".ph" + Filter, "w")
+    fr = open(path + "//result_" + norad + "_" + ymd + "_UT" + ut1 + ".ph" + Filter, "w")
 else:
-    fr = open(path + "//result" + "_UT" + ut1 + ".ph" + Filter, "w")
+    fr = open(path + "//result" + "_" + ymd + "_UT" + ut1 + ".ph" + Filter, "w")
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
 
 # from tqdm.auto import tqdm

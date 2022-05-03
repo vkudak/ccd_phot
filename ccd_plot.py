@@ -120,8 +120,9 @@ ax.yaxis.grid()
 Tf = Tt2s[0]
 Tf = Tf.split(":")
 TF = Tf[0]+Tf[1]+Tf[2]
+ymd = date[0].replace("-", "")
 
-figname = os.path.join(wd, norad + "_UT" + TF + ".png")
+figname = os.path.join(wd, norad + "_" + ymd + "_UT" + TF + ".png")
 # plt.savefig(norad + "_UT" + TF + ".png")
 plt.savefig(figname)
 plt.clf()
@@ -188,7 +189,7 @@ ax.yaxis.grid()
 # ----------------------------------------------------
 
 # plt.show()
-figname = os.path.join(wd, norad + "_UT" + TF + "_Imp.png")
+figname = os.path.join(wd, norad + "_" + ymd + "_UT" + TF + "_Imp.png")
 # plt.savefig(norad + "_UT" + TF + "_Imp.png")
 plt.savefig(figname)
 plt.clf()
