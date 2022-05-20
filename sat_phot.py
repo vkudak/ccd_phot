@@ -16,7 +16,7 @@ import warnings
 # matplotlib.use('Agg')
 
 
-def calc_mag(flux, el, rg, A, k):
+def calc_mag(flux, el, rg, A, k, exp):
     # print (flux)
     if flux < 0:
         mag = 15.0
@@ -331,7 +331,7 @@ for fit_file in fl:
         El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(site_lat, site_lon, site_elev, tle_list, date_time, cospar, norad, name)
         if El < 5:
             print("WARNING! Elevation of satellite < 5 deg. Check settings!")
-        mag = calc_mag(flux, El, Rg, A, k)
+        mag = calc_mag(flux, El, Rg, A, k, exp)
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
