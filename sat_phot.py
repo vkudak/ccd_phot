@@ -119,8 +119,10 @@ else:
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
 
 # from tqdm.auto import tqdm
+n_fit = len(fl)
 for fit_file in fl:
-    print("filename = " + fit_file, end=" ")
+    perc = fl.index(fit_file)/n_fit * 100
+    print(f"{perc:5.2f}%  filename = {fit_file}", end=" ")
     # hdu = fits.open(path + "//" + fit_file)[0]
     # data = hdu.data
     # header = hdu.header
@@ -337,7 +339,7 @@ for fit_file in fl:
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
         if mag < 15:
             fr.write(
-                f"{date} {time[:12]}    {phot_table['X'][0]:8.5f}  {phot_table['Y'][0]:8.5f}  {xerr:8.5f}  {yerr:8.5f}     {'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    {Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
+                f"{date} {time[:12]}   {phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  {xerr:8.5f}  {yerr:8.5f}     {'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    {Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
         else:
             print("WARNING! mag value < 15 mag, skipping this value!")
         # PLOT GENERAL FIT with apperture
