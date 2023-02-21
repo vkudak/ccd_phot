@@ -1,4 +1,7 @@
 #!python3.8
+import datetime
+from datetime import timedelta
+
 from astropy.stats import sigma_clipped_stats
 from astropy.io import fits
 import numpy as np
@@ -40,7 +43,7 @@ warnings.filterwarnings("ignore")
 
 path = sys.argv[1]
 
-config = configparser.ConfigParser()
+config = configparser.ConfigParser(inline_comment_prefixes="#")
 config.read(path + '//config_sat.ini')
 if os.path.isfile(path + '//config_sat.ini'):
     try:
@@ -54,6 +57,7 @@ if os.path.isfile(path + '//config_sat.ini'):
         k = float(config['STD']['k'])
         gate = int(config['STD']['gate'])
         Filter = config['STD']['Filter']
+        time_format = config.get('STD', 'Time_format', fallback="UT")
 
         try:
             dark_frame = config['STD']['dark_frame']
@@ -77,7 +81,6 @@ else:
     print("Error. Cant find config_sat.ini in " + path + '//config_sat.ini')
 
 tle_list = get_tle(tle_file)
-
 
 list = os.listdir(path)
 fl = []
@@ -134,6 +137,13 @@ for fit_file in fl:
     exp = float(exp)
     if date_time == '0001-01-01T00:00:00.0000000':
         date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
+
+    # correction DATE_TIME, datetime = datetime + exp / 2
+    date_time = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
+    date_time = date_time + timedelta(seconds=float(exp/2.0))
+    # and back to STR
+    date_time = date_time.strftime("%Y-%m-%dT%H:%M:%S.%f0")
+
     width = int(header.get('NAXIS1'))
     height = int(header.get('NAXIS2'))
     t_x, t_y = None, None
@@ -175,8 +185,11 @@ for fit_file in fl:
         fr.write("# SITE_LON   = %s\n" % site_lon)
         fr.write("# SITE_ELEV  = %s\n" % site_elev)
 
-
-        fr.write("#  Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err     magR  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
+        if time_format == "UT":
+            fr.write("#  Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err     magR  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
+        else:
+            fr.write(
+                "#      JD                     X          Y         Xerr      Yerr             Flux     Flux_err     magR  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
 
     ##################################
 
@@ -337,9 +350,15 @@ for fit_file in fl:
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
-        if mag < 15:
+        if (mag < 15) and (time_format == "UT"):
             fr.write(
                 f"{date} {time[:12]}   {phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  {xerr:8.5f}  {yerr:8.5f}     {'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    {Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
+        elif (mag < 15) and (time_format == "JD"):
+            from astropy.time import Time
+            date_time_jd = Time(date_time, format='isot', scale='utc')
+
+            fr.write(
+                f"{date_time_jd.jd:<23}   {phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  {xerr:8.5f}  {yerr:8.5f}     {'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    {Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
         else:
             print("WARNING! mag value < 15 mag, skipping this value!")
         # PLOT GENERAL FIT with apperture
