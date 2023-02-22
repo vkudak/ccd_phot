@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import configparser
 
+from astropy.time import Time
+
+
 filename = sys.argv[1]
 import os
 # cwd = os.getcwd()
@@ -12,8 +15,10 @@ wd = os.path.dirname(filename)
 # print(wd)
 
 
-config = configparser.ConfigParser()
+config = configparser.ConfigParser(inline_comment_prefixes="#")
 config.read(os.path.join(wd, 'config_sat.ini'))
+
+time_format = config.get('STD', 'Time_format', fallback="UT")
 try:
     filt = config['STD']['Filter']
     filt = filt.strip("\n")
@@ -53,20 +58,34 @@ cospar, norad, name, dt = read_name(filename)
 dt = float(dt)
 # print(cospar, norad, name, dt)
 
+date_time = []
 
-flux, mR, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(6, 8, 10, 11), unpack=True)
-date, time = np.genfromtxt(filename, unpack=True, skip_header=True, usecols=(0, 1), dtype=None, encoding="utf-8")
+if time_format == "UT":
+    flux, mR, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(6, 8, 10, 11), unpack=True)
+    date, time = np.genfromtxt(filename, unpack=True, skip_header=True, usecols=(0, 1), dtype=None, encoding="utf-8")
+
+    for i in range(0, len(date)):
+        # date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
+        date_time.append(datetime.strptime(date[i] + ' ' + time[i] + "000", "%Y-%m-%d %H:%M:%S.%f"))
+else:  # JD
+    flux, mR, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(5, 7, 9, 10), unpack=True)
+    jd = np.genfromtxt(filename, unpack=True, skip_header=True, usecols=(0,), dtype=None, encoding="utf-8")
+    jd = [float(x) for x in jd]
+    jd = Time(jd, format='jd', scale='utc')
+
+    for i in range(0, len(jd)):
+        date_time.append(jd[i].datetime)
+
+    date = [x.date().strftime("%Y-%m-%d") for x in date_time]
+
+# print(date[0], type(date[0]))
+# print(date_time[0], type(date_time[0]))
+
 # print(date)
 
 # old style (working!!!!)
 # flux, mR, Az, El = np.loadtxt(filename, unpack=True, usecols=(6, 8, 10, 11))
 # date, time = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(0, 1), dtype={'names': ('date', 'time'), 'formats': ('S10', 'S12')})
-
-
-date_time = []
-for i in range(0, len(date)):
-    # date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
-    date_time.append(datetime.strptime(date[i] + ' ' + time[i] + "000", "%Y-%m-%d %H:%M:%S.%f"))
 
 # print (date_time[2])
 
