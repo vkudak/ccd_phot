@@ -58,6 +58,8 @@ if os.path.isfile(path + '//config_sat.ini'):
         gate = int(config['STD']['gate'])
         Filter = config['STD']['Filter']
         time_format = config.get('STD', 'Time_format', fallback="UT")
+        time_format = time_format.strip()
+        min_real_mag = config.getfloat('STD', 'min_real_mag', fallback=15.0)
 
         try:
             dark_frame = config['STD']['dark_frame']
@@ -73,9 +75,8 @@ if os.path.isfile(path + '//config_sat.ini'):
         site_lon = config['SITE']['lon']
         site_elev = float(config['SITE']['h'])
 
-
     except Exception as E:
-        print("Error in inin file\n", E)
+        print("Error in INI file\n", E)
         sys.exit()
 else:
     print("Error. Cant find config_sat.ini in " + path + '//config_sat.ini')
@@ -350,10 +351,10 @@ for fit_file in fl:
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
-        if (mag < 15) and (time_format == "UT"):
+        if (mag < min_real_mag) and (time_format == "UT"):
             fr.write(
                 f"{date} {time[:12]}   {phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  {xerr:8.5f}  {yerr:8.5f}     {'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    {Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
-        elif (mag < 15) and (time_format == "JD"):
+        elif (mag < min_real_mag) and (time_format == "JD"):
             from astropy.time import Time
             date_time_jd = Time(date_time, format='isot', scale='utc')
 
