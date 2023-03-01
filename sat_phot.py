@@ -19,10 +19,10 @@ import warnings
 # matplotlib.use('Agg')
 
 
-def calc_mag(flux, el, rg, A, k, exp):
+def calc_mag(flux, el, rg, A, k, exp, min_mag=15):
     # print (flux)
     if flux < 0:
-        mag = 15.0
+        mag = min_mag
         return mag
     else:
         m_inst = -2.5 * math.log10(flux/exp)
@@ -60,6 +60,7 @@ if os.path.isfile(path + '//config_sat.ini'):
         time_format = config.get('STD', 'Time_format', fallback="UT")
         time_format = time_format.strip()
         min_real_mag = config.getfloat('STD', 'min_real_mag', fallback=15.0)
+        max_center_error = config.getfloat('STD', 'max_center_err', fallback=2.0)
 
         try:
             dark_frame = config['STD']['dark_frame']
@@ -125,7 +126,7 @@ else:
 # from tqdm.auto import tqdm
 n_fit = len(fl)
 for fit_file in fl:
-    perc = fl.index(fit_file)/n_fit * 100
+    perc = fl.index(fit_file)/(n_fit-1) * 100
     print(f"{perc:5.2f}%  filename = {fit_file}", end=" ")
     # hdu = fits.open(path + "//" + fit_file)[0]
     # data = hdu.data
@@ -278,7 +279,7 @@ for fit_file in fl:
 
     # ------------------------------------ PHOTOMETRY-------------------------------------------------
     # print(target)
-    if (target) and (target[2] < 2):  # and (target[-1] > min_signal):
+    if (target) and (target[2] < max_center_error):  # and (target[-1] > min_signal):
         positions = target[:2]
         aperture = CircularAperture(positions, r=r_ap)
         annulus_aperture = CircularAnnulus(positions, r_in=an_in, r_out=an_out)
@@ -347,21 +348,24 @@ for fit_file in fl:
         El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(site_lat, site_lon, site_elev, tle_list, date_time, cospar, norad, name)
         if El < 5:
             print("WARNING! Elevation of satellite < 5 deg. Check settings!")
-        mag = calc_mag(flux, El, Rg, A, k, exp)
+        mag = calc_mag(flux, El, Rg, A, k, exp, min_mag=min_real_mag)
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
-        if (mag < min_real_mag) and (time_format == "UT"):
+        # print(mag)
+        # print(mag < min_real_mag, mag > min_real_mag)
+
+        if (mag <= min_real_mag) and (time_format == "UT"):
             fr.write(
                 f"{date} {time[:12]}   {phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  {xerr:8.5f}  {yerr:8.5f}     {'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    {Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
-        elif (mag < min_real_mag) and (time_format == "JD"):
+        elif (mag <= min_real_mag) and (time_format == "JD"):
             from astropy.time import Time
             date_time_jd = Time(date_time, format='isot', scale='utc')
 
             fr.write(
                 f"{date_time_jd.jd:<23}   {phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  {xerr:8.5f}  {yerr:8.5f}     {'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    {Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
         else:
-            print("WARNING! mag value < 15 mag, skipping this value!")
+            print(f"WARNING! mag value < {min_real_mag} mag, skipping this value!")
         # PLOT GENERAL FIT with apperture
         # import matplotlib.pyplot as plt
         # from matplotlib.patches import Circle
