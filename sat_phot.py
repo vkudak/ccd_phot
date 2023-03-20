@@ -35,7 +35,7 @@ def calc_mag(flux, el, rg, A, k, exp, min_mag=15):
 
 
 if len(sys.argv) < 2:
-    print("Not enouth parameters. Enter path")
+    print("Not enough parameters. Enter path")
     sys.exit()
 
 
@@ -43,10 +43,14 @@ warnings.filterwarnings("ignore")
 
 path = sys.argv[1]
 
+# iniList = glob.glob('*config*.ini')
+
 config = configparser.ConfigParser(inline_comment_prefixes="#")
-config.read(path + '//config_sat.ini')
+
 if os.path.isfile(path + '//config_sat.ini'):
     try:
+        config.read(path + '//config_sat.ini')
+
         cospar = config['NAME']['COSPAR']
         norad = config['NAME']['NORAD']
         name = config['NAME']['NAME']
@@ -80,7 +84,8 @@ if os.path.isfile(path + '//config_sat.ini'):
         print("Error in INI file\n", E)
         sys.exit()
 else:
-    print("Error. Cant find config_sat.ini in " + path + '//config_sat.ini')
+    print("Error. Cant find config_sat.ini in " + os.path.join(path, "config_sat.ini"))
+    sys.exit()
 
 tle_list = get_tle(tle_file)
 
@@ -90,7 +95,6 @@ for fn in list:
     f = fn.split('.')
     if f[-1] in ['FIT', 'FITS', 'fit', 'fits']:
         fl.append(fn)
-
 fl.sort()
 
 debug = True
