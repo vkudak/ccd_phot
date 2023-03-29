@@ -60,7 +60,8 @@ if os.path.isfile(path + '//config_sat.ini'):
         A = float(config['STD']['A'])
         k = float(config['STD']['k'])
         gate = int(config['STD']['gate'])
-        Filter = config['STD']['Filter']
+        Filter = config.get('STD','Filter', fallback="F")
+        Filter = Filter.strip()
         time_format = config.get('STD', 'Time_format', fallback="UT")
         time_format = time_format.strip()
         min_real_mag = config.getfloat('STD', 'min_real_mag', fallback=15.0)
@@ -192,10 +193,10 @@ for fit_file in fl:
         fr.write("# SITE_ELEV  = %s\n" % site_elev)
 
         if time_format == "UT":
-            fr.write("#  Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err     magR  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
+            fr.write(f"#  Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err     mag{Filter}  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
         else:
             fr.write(
-                "#      JD                     X          Y         Xerr      Yerr             Flux     Flux_err     magR  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
+                f"#      JD                     X          Y         Xerr      Yerr             Flux     Flux_err     mag{Filter}  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
 
     ##################################
 

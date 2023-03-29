@@ -1,6 +1,7 @@
 import numpy as np
 # import astropy.io.fits as fits
 import os
+import sys
 # from astropy.stats import mad_std
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
@@ -255,7 +256,7 @@ def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=Fals
     # data_fit = data_fit[~np.isnan(data_fit)]
     # data_fit = data_fit *2.5
     # print(data_fit)
-    par, pcov = fit(data_fit, mf = 20000)
+    par, pcov = fit(data_fit, mf=20000)
 
     err = np.sqrt(np.diag(pcov))
     amp = par[-1]
@@ -339,6 +340,7 @@ def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
                 az = math.degrees(sat.az)
                 return el, rg, az, n, no, c, tle
             else:
-                print('Cant find TLE for such satellite!')
+                print('\nCan not find TLE for such satellite !!!')
+                sys.exit()
         except Exception as ex:
             print("Error occurred. Probably wrong TLE file. \n Error = " + ex.message)
