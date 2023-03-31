@@ -182,6 +182,7 @@ for fit_file in fl:
         # take EXPTIME from the middle of LC
         exp_header = fits.getheader(path + "//" + fl[int(len(fl)/2)])
         fr.write("# dt = %s\n" % exp_header.get('EXPTIME'))
+        fr.write("# Filter = %s\n" % Filter)
 
         fr.write("# COSPAR = %s\n" % cosp)
         fr.write("# NORAD  = %s\n" % nor)
