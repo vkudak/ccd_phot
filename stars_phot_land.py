@@ -3,8 +3,8 @@ from astropy.stats import sigma_clipped_stats
 from astropy.io import fits
 import numpy as np
 from numpy.ma import masked
-from photutils import CircularAperture, CircularAnnulus
-from photutils import aperture_photometry
+from photutils.aperture import CircularAperture, CircularAnnulus
+# from photutils.aperture import aperture_photometry
 from sp_utils import *
 import math
 # import glob
@@ -86,7 +86,6 @@ warnings.filterwarnings("ignore")
 
 ploting = False  # plot each frame with appertures
 
-
 # star_example = {"NOMAD": "1141-0043729", "Vmag": 5, "Rmag": 5.3, "V-R": 0.3, "flux": [1,2,3,4], "flux_err": [1,2,3,4], "flux/bkg": [1,2,3,4], "Mz": [1,2,3,4], "X": [1,2,3,4], "Y": [1,2,3,4]}
 # database = ["NOMAD":star_example,]
 database = []
@@ -98,11 +97,7 @@ if ploting:
     # from astropy.visualization import LogStretch
     # from astropy.visualization.mpl_normalize import ImageNormalize
 
-station = ephem.Observer()
-station.lat = '48.5635505'
-station.long = '22.453751'
-station.elevation = 231.1325
-
+# TODO: add data to config
 config = configparser.ConfigParser(inline_comment_prefixes="#")
 config.read(path + '//config_stars.ini')
 if os.path.isfile(path + '//config_stars.ini'):
@@ -122,9 +117,19 @@ if os.path.isfile(path + '//config_stars.ini'):
         except Exception:
             dark_frame = False
 
+        dark_stable = config['Stars_Stand'].getfloat('dark_stable', fallback=0.0)
+
         r_ap = float(config['APERTURE']['r_ap'])
         an_in = float(config['APERTURE']['an_in'])
         an_out = float(config['APERTURE']['an_out'])
+
+        scale_min = config['astrometry.net'].getfloat('scale_lower', fallback=1)
+        scale_max = config['astrometry.net'].getfloat('scale_upper', fallback=20)
+
+        # site_name = config['SITE'].getstr('Name')
+        site_lat = config['SITE']["lat"]
+        site_lon = config['SITE']['lon']
+        site_elev = config['SITE'].getfloat('h')
 
     except Exception as E:
         print("Error in inin file\n", E)
@@ -132,9 +137,13 @@ if os.path.isfile(path + '//config_stars.ini'):
 else:
     print("Error. Cant find config_stars.ini in " + path + '//config_stars.ini')
 
+station = ephem.Observer()
+station.lat = site_lat #'48.5635505'
+station.long = site_lon #'22.453751'
+station.elevation = site_elev #231.1325
 
+# print(station.lat, station.lon)
 # print (path)
-
 list = os.listdir(path)
 fl = []
 for fn in list:
@@ -151,6 +160,7 @@ fl.sort()
 # #################### BEGIN
 ast = AstrometryNet()
 # ast.show_allowed_settings()
+# sys.exit()
 
 ast.api_key = "ittzfaqwnrvduhax"
 
@@ -164,6 +174,7 @@ log_file = open(path + '//star_phot.log', "w")
 A_general = []
 c_general = []
 
+# TODO: separate processing FITS and calculation of parameters
 for fit_file in fl:
     print(fit_file)
     log_file.write("####################################################\n")
@@ -176,18 +187,36 @@ for fit_file in fl:
     exp = header.get('EXPTIME')
     hdu.close()
     author = None
-    try:
-        author = header.get('AUTHOR')
-        if author == "LKD UZhNU":
-            log_file.write('File with WCS\n')
-    except Exception:
-        pass
-    if (author is None) or (author not in ["LKD UZhNU"]):
+
+    # TODO: check if FITS file has valid WCS not only astrometry.net solution
+    astrometry_net = False
+    # for c in header.get('COMMENT'):# + header.get('HISTORY'):
+    if "Astrometry.net" or "astrometry.net" in header.get('COMMENT') or header.get('HISTORY'):
+        astrometry_net = True
+
+    # try:
+    #     author = header.get('AUTHOR')
+    #     if author == "LKD UZhNU":
+    #         log_file.write('File with WCS\n')
+    # except Exception:
+    #     pass
+
+    # if (author is None) or (author not in ["LKD UZhNU"]):
+    if not astrometry_net:
         while try_again:
             try:
                 if not submission_id:
                     print(path + "//" + fit_file)
-                    wcs_header = ast.solve_from_image(path + "//" + fit_file, submission_id=submission_id, force_image_upload=True, downsample_factor=2, scale_units="arcsecperpix", scale_type='ul', scale_upper=12.0, scale_lower=8, tweak_order=3)
+                    wcs_header = ast.solve_from_image(path + "//" + fit_file,
+                                                      submission_id=submission_id,
+                                                      crpix_center=True,
+                                                      force_image_upload=True,
+                                                      downsample_factor=2,
+                                                      scale_units="arcsecperpix",
+                                                      scale_type='ul',
+                                                      scale_upper=scale_max, #12.0,
+                                                      scale_lower=scale_min, #8,
+                                                      tweak_order=3)
                 else:
                     wcs_header = ast.monitor_submission(submission_id, solve_timeout=120)
             except TimeoutError as e:
@@ -198,11 +227,12 @@ for fit_file in fl:
 
         if wcs_header:
             # Code to execute when solve succeeds
+            # TODO: ERROR. If solved with astrometry.net over astroquery -> pixel values are negative
             print("OK")
             log_file.write("file SOLVED\n")
             with fits.open(path + "//" + fit_file, mode='update') as hdul:
                 hdul[0].header = wcs_header
-                hdul[0].header.append(('AUTHOR', "LKD UZhNU", 'Solved sucessfuly with astrometry.net'))
+                hdul[0].header.append(('AUTHOR', "LKD UZhNU", 'Solved successfully with astrometry.net'))
                 hdul[0].header.append(('DATE-OBS', date_time, "System Clock:Est. Frame Start -OR- GPS:Start Exposure"))
                 hdul[0].header.append(('EXPTIME', exp, "EXPOSURE in seconds"))
                 hdul.flush()
@@ -212,7 +242,8 @@ for fit_file in fl:
             # Code to execute when solve fails
             print("Fail")
             log_file.write("file NOT SOLVED\n")
-
+    else:
+        log_file.write('File with WCS\n')
     # BEGIN star find---------------------------------------------------------------
     # 1. Get RA DEC of image center
     # https://python4astronomers.github.io/astropy/wcs.html
@@ -221,9 +252,18 @@ for fit_file in fl:
     # 4. calculate star flux at X,Y
     # 5. make result in flux, Rmag, Mz ??????
     log_file.write('Begin star find procedure...\n')
+    # sys.exit()
 
     header = fits.getheader(path + "//" + fit_file)
     image_tmp = fits.getdata(path + "//" + fit_file)
+
+    # mean, median, std = sigma_clipped_stats(image_tmp, sigma=3.0)
+    # log_file.write(f"Image statistic mean {mean}, median {median}, std {std}\n")
+
+    if dark_stable > 0:
+        print(f"Substracting {dark_stable}")
+        log_file.write(f"Substracting {dark_stable} from Frame...\n")
+        image_tmp = image_tmp - dark_stable
 
     if dark_frame:
         dark_arr = fits.getdata(dark_frame)
@@ -232,11 +272,12 @@ for fit_file in fl:
 
         minI = np.min(image_tmp)
         if minI < 0:
-            print("Warning! Image - Dark has negativ pixels...")
-            log_file.write("Warning! Image - Dark has negativ pixels...\n")
+            print("Warning! Image - Dark has negative pixels...")
+            log_file.write("Warning! Image - Dark has negative pixels...\n")
     else:
         ph_image = image_tmp
         mean, median, std = sigma_clipped_stats(image_tmp, sigma=3.0)
+        log_file.write(f"Image statistic mean {mean}, median {median}, std {std}\n")
         image_tmp = image_tmp - mean
 
     xc = header["NAXIS1"] / 2.
@@ -340,12 +381,13 @@ for fit_file in fl:
                     vmr = row["Vmag"] - row["Rmag"]
 
                     star = ephem.FixedBody()
-                    star._ra = ephem.degrees(str(ra_s))
+                    star._ra = ephem.hours(str(ra_s))
                     star._dec = ephem.degrees(str(dec_s))
                     station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
                     star.compute(station)
                     el = star.alt  # in radians !!!!!!!!
-                    Mz = 1 / (math.cos(math.pi / 2 - el))
+                    zen_angle = (math.pi / 2.) - el
+                    Mz = 1. / (math.cos(zen_angle))
 
                     if (flux > 0) and (vmr is not masked) and (abs(row["Rmag"] - row["Vmag"]) < 2):
                         if c_flag:
