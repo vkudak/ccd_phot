@@ -79,7 +79,6 @@ if len(sys.argv) < 2:
     print("Not enough parameters. Enter path")
     sys.exit()
 
-
 path = sys.argv[1]
 
 warnings.filterwarnings("ignore")
@@ -90,6 +89,8 @@ ploting = False  # plot each frame with appertures
 # database = ["NOMAD":star_example,]
 database = []
 
+log_file = open(path + '//star_phot.log', "w")
+
 if ploting:
     # for plot
     import matplotlib.pyplot as plt
@@ -97,50 +98,48 @@ if ploting:
     # from astropy.visualization import LogStretch
     # from astropy.visualization.mpl_normalize import ImageNormalize
 
-# TODO: add data to config
 config = configparser.ConfigParser(inline_comment_prefixes="#")
 config.read(path + '//config_stars.ini')
 if os.path.isfile(path + '//config_stars.ini'):
     try:
-        kr = config['Stars_Stand']['K']
-        kr = float(kr)
-        max_m = config['Stars_Stand']['max_m']
-        rms_val = float(config['Stars_Stand']['A_rms'])
-        c_flag = config['Stars_Stand'].getboolean('calc_C')
-        snr_value = config['Stars_Stand'].getfloat('snr')
+        kr = config.getfloat('Stars_Stand', 'K')
+        max_m = config.get('Stars_Stand', 'max_m', fallback=14)
+        rms_val = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
+        c_flag = config.getboolean('Stars_Stand', 'calc_C', fallback=True)
+        snr_value = config.getfloat('Stars_Stand', 'snr', fallback=1.2)
         if not c_flag:
-            Cr = config['Stars_Stand']['C']
-            Cr = float(Cr)
+            Cr = config.getfloat('Stars_Stand', 'C')
 
-        try:
-            dark_frame = config['Stars_Stand']['dark_frame']
-        except Exception:
-            dark_frame = False
+        dark_frame = config.get('Stars_Stand', 'dark_frame', fallback=False)
+        dark_stable = config.getfloat('Stars_Stand', 'dark_stable', fallback=0.0)
 
-        dark_stable = config['Stars_Stand'].getfloat('dark_stable', fallback=0.0)
+        r_ap = config.getfloat('APERTURE', 'r_ap')
+        an_in = config.getfloat('APERTURE', 'an_in')
+        an_out = config.getfloat('APERTURE', 'an_out')
 
-        r_ap = float(config['APERTURE']['r_ap'])
-        an_in = float(config['APERTURE']['an_in'])
-        an_out = float(config['APERTURE']['an_out'])
+        scale_min = config.getfloat('astrometry.net', 'scale_lower', fallback=1)
+        scale_max = config.getfloat('astrometry.net', 'scale_upper', fallback=20)
+        api_key = config.get('astrometry.net', 'api_key', fallback="No key")
 
-        scale_min = config['astrometry.net'].getfloat('scale_lower', fallback=1)
-        scale_max = config['astrometry.net'].getfloat('scale_upper', fallback=20)
+        if scale_max == 20 and scale_min == 1:
+            print("No 'astrometry.net' section in INI file. Using default astrometry.net params")
+            log_file.write("No 'astrometry.net' section in INI file. Using default astrometry.net params\n")
 
-        # site_name = config['SITE'].getstr('Name')
-        site_lat = config['SITE']["lat"]
-        site_lon = config['SITE']['lon']
-        site_elev = config['SITE'].getfloat('h')
+        site_name = config.get('SITE', 'Name', fallback="No name")
+        site_lat = config.get('SITE', "lat")
+        site_lon = config.get('SITE', 'lon')
+        site_elev = config.getfloat('SITE', 'h')
 
     except Exception as E:
-        print("Error in inin file\n", E)
+        print("Error in INI file\n", E)
         sys.exit()
 else:
     print("Error. Cant find config_stars.ini in " + path + '//config_stars.ini')
 
 station = ephem.Observer()
-station.lat = site_lat #'48.5635505'
-station.long = site_lon #'22.453751'
-station.elevation = site_elev #231.1325
+station.lat = site_lat  #'48.5635505'
+station.long = site_lon  #'22.453751'
+station.elevation = site_elev  #231.1325
 
 # print(station.lat, station.lon)
 # print (path)
@@ -162,14 +161,12 @@ ast = AstrometryNet()
 # ast.show_allowed_settings()
 # sys.exit()
 
-ast.api_key = "ittzfaqwnrvduhax"
+ast.api_key = api_key
 
 
 if ploting:
     fig, ax = plt.subplots()
 
-
-log_file = open(path + '//star_phot.log', "w")
 
 A_general = []
 c_general = []
@@ -190,18 +187,10 @@ for fit_file in fl:
 
     # TODO: check if FITS file has valid WCS not only astrometry.net solution
     astrometry_net = False
-    # for c in header.get('COMMENT'):# + header.get('HISTORY'):
     if "Astrometry.net" or "astrometry.net" in header.get('COMMENT') or header.get('HISTORY'):
         astrometry_net = True
 
-    # try:
-    #     author = header.get('AUTHOR')
-    #     if author == "LKD UZhNU":
-    #         log_file.write('File with WCS\n')
-    # except Exception:
-    #     pass
 
-    # if (author is None) or (author not in ["LKD UZhNU"]):
     if not astrometry_net:
         while try_again:
             try:
@@ -237,10 +226,9 @@ for fit_file in fl:
                 hdul[0].header.append(('EXPTIME', exp, "EXPOSURE in seconds"))
                 hdul.flush()
                 hdul.close()
-
         else:
             # Code to execute when solve fails
-            print("Fail")
+            print("Fail. Not solved")
             log_file.write("file NOT SOLVED\n")
     else:
         log_file.write('File with WCS\n')
