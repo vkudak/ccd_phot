@@ -103,7 +103,7 @@ config.read(path + '//config_stars.ini')
 if os.path.isfile(path + '//config_stars.ini'):
     try:
         kr = config.getfloat('Stars_Stand', 'K')
-        max_m = config.get('Stars_Stand', 'max_m', fallback=14)
+        max_m = config.get('Stars_Stand', 'max_m_fit', fallback="14")
         rms_val = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
         c_flag = config.getboolean('Stars_Stand', 'calc_C', fallback=True)
         snr_value = config.getfloat('Stars_Stand', 'snr', fallback=1.2)

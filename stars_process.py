@@ -24,7 +24,6 @@ if len(sys.argv) < 2:
 
 
 path = sys.argv[1]
-
 warnings.filterwarnings("ignore")
 
 ploting = False  # plot each frame with appertures
@@ -35,6 +34,8 @@ ploting = False  # plot each frame with appertures
 database = []
 a_database = []
 
+log_file = open(path + '//star_process.log', "w")
+
 if ploting:
     # for plot
     import matplotlib.pyplot as plt
@@ -42,42 +43,50 @@ if ploting:
     # from astropy.visualization import LogStretch
     # from astropy.visualization.mpl_normalize import ImageNormalize
 
-station = ephem.Observer()
-station.lat = '48.5635505'
-station.long = '22.453751'
-station.elevation = 231.1325
-
 config = configparser.ConfigParser(inline_comment_prefixes="#")
 config.read(path + '//config_stars.ini')
 if os.path.isfile(path + '//config_stars.ini'):
     try:
-        kr = config['Stars_Stand']['K']
-        kr = float(kr)
-        max_m = config['Stars_Stand']['max_m_fit']
-        rms_val = float(config['Stars_Stand']['A_rms'])
-        c_flag = config['Stars_Stand'].getboolean('calc_C')
-        snr_value = config['Stars_Stand'].getfloat('snr')
+        kr = config.getfloat('Stars_Stand', 'K')
+        max_m = config.get('Stars_Stand', 'max_m_fit', fallback="14")
+        rms_val = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
+        c_flag = config.getboolean('Stars_Stand', 'calc_C', fallback=True)
+        snr_value = config.getfloat('Stars_Stand', 'snr', fallback=1.2)
         if not c_flag:
-            Cr = config['Stars_Stand']['C']
-            Cr = float(Cr)
+            Cr = config.getfloat('Stars_Stand', 'C')
 
-        try:
-            dark_frame = config['Stars_Stand']['dark_frame']
-        except Exception:
-            dark_frame = False
+        dark_frame = config.get('Stars_Stand', 'dark_frame', fallback=False)
+        dark_stable = config.getfloat('Stars_Stand', 'dark_stable', fallback=0.0)
 
-        r_ap = float(config['APERTURE']['r_ap'])
-        an_in = float(config['APERTURE']['an_in'])
-        an_out = float(config['APERTURE']['an_out'])
+        r_ap = config.getfloat('APERTURE', 'r_ap')
+        an_in = config.getfloat('APERTURE', 'an_in')
+        an_out = config.getfloat('APERTURE', 'an_out')
+
+        scale_min = config.getfloat('astrometry.net', 'scale_lower', fallback=1)
+        scale_max = config.getfloat('astrometry.net', 'scale_upper', fallback=20)
+        api_key = config.get('astrometry.net', 'api_key', fallback="No key")
+
+        if scale_max == 20 and scale_min == 1:
+            print("No 'astrometry.net' section in INI file. Using default astrometry.net params")
+            log_file.write("No 'astrometry.net' section in INI file. Using default astrometry.net params\n")
+
+        site_name = config.get('SITE', 'Name', fallback="No name")
+        site_lat = config.get('SITE', "lat")
+        site_lon = config.get('SITE', 'lon')
+        site_elev = config.getfloat('SITE', 'h')
 
     except Exception as E:
-        print("Error in inin file\n", E)
+        print("Error in INI file\n", E)
         sys.exit()
 else:
     print("Error. Cant find config_stars.ini in " + path + '//config_stars.ini')
 
 
-# print (path)
+station = ephem.Observer()
+station.lat = site_lat  #'48.5635505'
+station.long = site_lon  #'22.453751'
+station.elevation = site_elev  #231.1325
+
 
 list = os.listdir(path)
 fl = []
@@ -102,8 +111,6 @@ ast.api_key = "ittzfaqwnrvduhax"
 if ploting:
     fig, ax = plt.subplots()
 
-
-log_file = open(path + '//star_process.log', "w")
 
 A_general = []
 c_general = []
@@ -284,7 +291,7 @@ for fit_file in fl:
                     vmr = row["Vmag"] - row["Rmag"]
 
                     star = ephem.FixedBody()
-                    star._ra = ephem.degrees(str(ra_s))
+                    star._ra = ephem.hours(str(ra_s))
                     star._dec = ephem.degrees(str(dec_s))
                     station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
                     star.compute(station)
