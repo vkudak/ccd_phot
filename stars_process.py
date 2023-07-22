@@ -26,13 +26,19 @@ if len(sys.argv) < 2:
 path = sys.argv[1]
 warnings.filterwarnings("ignore")
 
-ploting = False  # plot each frame with appertures
+ploting = False  # plot each frame with apertures
 
 
-# star_example = {"NOMAD": "1141-0043729", "Vmag": 5, "Rmag": 5.3, "V-R": 0.3, "flux": [1,2,3,4], "flux_err": [1,2,3,4], "flux/bkg": [1,2,3,4], "Mz": [1,2,3,4], "X": [1,2,3,4], "Y": [1,2,3,4]}
+# star_example = {
+#     "NOMAD": "1141-0043729",
+#     "Vmag": 5, "Rmag": 5.3,
+#     "V-R": 0.3,
+#     "flux": [1,2,3,4], "flux_err": [1,2,3,4], "flux/bkg": [1,2,3,4],
+#     "Mz": [1,2,3,4],
+#     "X": [1,2,3,4], "Y": [1,2,3,4]
+# }
 # database = ["NOMAD":star_example,]
 database = []
-a_database = []
 
 log_file = open(path + '//star_process.log', "w")
 
@@ -226,8 +232,7 @@ for fit_file in fl:
 
     if ploting:
         plt.imshow(image_tmp, cmap='Greys', origin='lower')
-    A_list = []
-    y_ar, x_ar = [], []
+
     star_count = 0
     if not c_flag:
         log_file.write("   SimbadName         Vmag       Rmag         Flux         A        Mz         X           Y\n")
@@ -288,7 +293,7 @@ for fit_file in fl:
                     fb = phot_table['flux_bkg'][z]
                     snr = phot_table['snr'][z]
 
-                    vmr = row["Vmag"] - row["Rmag"]
+                    vmr = row["V-R"]  #row["Vmag"] - row["Rmag"]
 
                     star = ephem.FixedBody()
                     star._ra = ephem.hours(str(ra_s))
@@ -298,14 +303,8 @@ for fit_file in fl:
                     el = star.alt  # in radians !!!!!!!!
                     Mz = 1 / (math.cos(math.pi / 2 - el))
 
-                    if (flux > 0) and (vmr is not masked) and (abs(row["Rmag"] - row["Vmag"]) < 2):
+                    if (flux > 0) and (vmr is not masked) and (abs(row["V-R"]) < 2):
                         if c_flag:
-                            m_inst = -2.5 * math.log10(flux/exp)
-                            yq = row["Rmag"] - m_inst + kr * Mz
-                            if (snr > snr_value):
-                                y_ar.append(yq)
-                                x_ar.append(vmr)
-
                             fs = str.format("{0:" ">10.3f}", flux)
                             fes = str.format("{0:" ">8.3f}", flux_err)
                             fbs = str.format("{0:" ">10.3f}", fb)
@@ -322,8 +321,7 @@ for fit_file in fl:
                                                (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                         else:
                             m_inst = -2.5 * math.log10(flux/exp)
-                            A = row["Rmag"] - m_inst + kr * Mz - Cr * vmr  # <------------------ A
-                            A_list.append(A)
+                            A = row["Rmag"] - m_inst - (kr * Mz) - Cr * vmr  # <------------------ A
 
                             # print ("%8.5f  %8.5f  %10.5f  %8.5f  %8.5f" % (row["Vmag"], math.degrees(el), Mz, ra_s, dec_s))
                             fs = str.format("{0:" ">10.5f}", flux)

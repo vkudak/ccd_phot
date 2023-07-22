@@ -25,6 +25,21 @@ import pickle
 # !!!! http://vizier.u-strasbg.fr/viz-bin/VizieR-4
 # Stellar Photometry in Johnson's 11-color system (Ducati, 2002)
 
+
+
+'''
+Papers to help:
+
+https://arxiv.org/pdf/1205.6529.pdf
+https://arxiv.org/pdf/1401.4281.pdf
+https://adsabs.harvard.edu/pdf/1983PASP...95.1021S
+https://www.ias.ac.in/article/fulltext/joaa/012/04/0319-0331
+
+http://dspace.onu.edu.ua:8080/handle/123456789/4660
+https://slittlefair.staff.shef.ac.uk/teaching/phy241/lectures/l07/
+'''
+
+
 def RMS_del(A, value, B=None):
     '''Delete elements of array A until A.RMS>value'''
     A = np.array(A)
@@ -67,7 +82,7 @@ try:
     db_file = sys.argv[1]
     database, exp = pickle.load(open(db_file, "rb"))
 except Exception as E:
-    print("Error fileread", db_file)
+    print("Error database file read", db_file)
     print(repr(E))
     sys.exit()
 
@@ -164,13 +179,13 @@ for i in range(len(database)):
     # print (database[i]["NOMAD1"], database[i]["Flux_mean"], database[i]["Flux_std"])
     if (database[i]["Flux_mean"] > 0) and \
             (database[i]["Vmag"] < max_m) and \
-            (abs(database[i]["V-R"]) < 0.95) and \
+            (abs(database[i]["V-R"]) < 1.95) and \
             (len(database[i]["Flux"]) > 5):
         m_inst = -2.5 * math.log10(database[i]["Flux_mean"]/exp)
 
         if c_flag:
             # yq = database[i]["Rmag"] + m_inst - kr * database[i]["Mz"]
-            yq = database[i]["Rmag"] - m_inst + kr * database[i]["Mz"]
+            yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
             # if (yq < 17) and (yq > 14) and (database[i]["f/b"].mean(axis=0) > snr_value):
             if database[i]["f/b"].mean(axis=0) > snr_value:
                 database[i]["yq"] = yq
@@ -188,7 +203,7 @@ for i in range(len(database)):
                 database[i]["Good"] = "low s/n"
 
         else:
-            database[i]["A"] = database[i]["Rmag"] - m_inst + kr * database[i]["Mz"] + Cr * database[i]["V-R"]
+            database[i]["A"] = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"] - Cr * database[i]["V-R"]
             if database[i]["f/b"].mean(axis=0) > snr_value:
                 A_m_list.append(database[i]["A"])
                 A_mR_list.append(database[i]["Rmag"])
@@ -237,8 +252,9 @@ if c_flag:
         # print("A=%5.3f  Cr=%5.3f  R^2=%5.3f" % (a2, c2, r_sq))
         # c = c2
 
-        lya_v = 547
-        lya_r = 635
+        # https://www.annualreviews.org/doi/pdf/10.1146/annurev.astro.41.082801.100251
+        lya_v = 544.8 #547
+        lya_r = 640.7 #635     lya_eff
         lya_eff = (lya_r * lya_v) / (c * (lya_v - lya_r) + lya_v)
         print("############################LSQ_FIT Results#################################")
         print("A = %2.5f +/- %2.5f, c = %2.5f +/- %2.5f" % (a, a_err, c, c_err))
