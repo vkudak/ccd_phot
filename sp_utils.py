@@ -344,3 +344,22 @@ def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
                 sys.exit()
         except Exception as ex:
             print("Error occurred. Probably wrong TLE file. \n Error = " + ex.message)
+
+
+def word_in_hfield(word, h_field):
+    """
+    Check if word is in header field (h_field)
+    Parameters:
+        word: search word
+        h_field: astropy.io.fits.header._****  Field. (can be list as COMMENT or HISTORY)
+    Returns: False or True
+    """
+    try:
+        for c in h_field:
+            if word in c:
+                return True
+            else:
+                return False
+    except TypeError:
+        # return False if h_field does not  exist ('NoneType')
+        return False

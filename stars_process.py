@@ -3,7 +3,7 @@ from astropy.stats import sigma_clipped_stats
 from astropy.io import fits
 import numpy as np
 from numpy.ma import masked
-from photutils import CircularAperture, CircularAnnulus
+from photutils.aperture import CircularAperture, CircularAnnulus
 from sp_utils import *
 import math
 import sys
@@ -111,7 +111,7 @@ fl.sort()
 ast = AstrometryNet()
 # ast.show_allowed_settings()
 
-ast.api_key = "ittzfaqwnrvduhax"
+ast.api_key = api_key
 
 
 if ploting:
@@ -123,28 +123,40 @@ c_general = []
 
 for fit_file in fl:
     print(fit_file)
+    file_with_path = os.path.join(path, fit_file)
     log_file.write("####################################################\n")
-    log_file.write("filename = " + path + "//" + fit_file + "\n")
+    log_file.write("filename = " + file_with_path + "\n")
     try_again = True
     submission_id = None
-    hdu = fits.open(path + "//" + fit_file)
+    hdu = fits.open(file_with_path)  # path + "//" + fit_file)
     header = hdu[0].header
     date_time = hdu[0].header.get('DATE-OBS')
     exp = header.get('EXPTIME')
     hdu.close()
-    author = None
-    try:
-        author = header.get('AUTHOR')
-        if author == "LKD UZhNU":
-            log_file.write('File with WCS\n')
-    except Exception:
-        pass
-    if (author is None) or (author not in ["LKD UZhNU"]):
+    # author = None
+    author = header.get('AUTHOR')
+
+    astrometry_net = False
+    # if (header.get('COMMENT') is not None) or (header.get('HISTORY') is not None):
+    for as_value in ["Astrometry.net", "astrometry.net"]:
+        if word_in_hfield(as_value, header.get('COMMENT')) or word_in_hfield(as_value, header.get('HISTORY')):
+            astrometry_net = True
+
+    if not astrometry_net:
         while try_again:
             try:
                 if not submission_id:
-                    print(path + "//" + fit_file)
-                    wcs_header = ast.solve_from_image(path + "//" + fit_file, submission_id=submission_id, force_image_upload=True, downsample_factor=2, scale_units="arcsecperpix", scale_type='ul', scale_upper=12.0, scale_lower=8, tweak_order=3)
+                    print(file_with_path)
+                    wcs_header = ast.solve_from_image(file_with_path,
+                                                      submission_id=submission_id,
+                                                      force_image_upload=True,
+                                                      crpix_center=True,
+                                                      downsample_factor=2,
+                                                      scale_units="arcsecperpix",
+                                                      scale_type='ul',
+                                                      scale_upper=scale_max,
+                                                      scale_lower=scale_min,
+                                                      tweak_order=3)
                 else:
                     wcs_header = ast.monitor_submission(submission_id, solve_timeout=120)
             except TimeoutError as e:
@@ -156,14 +168,19 @@ for fit_file in fl:
         if wcs_header:
             # Code to execute when solve succeeds
             print("OK")
+            # sys.exit()
             log_file.write("file SOLVED\n")
-            with fits.open(path + "//" + fit_file, mode='update') as hdul:
-                hdul[0].header = wcs_header
-                hdul[0].header.append(('AUTHOR', "LKD UZhNU", 'Solved sucessfuly with astrometry.net'))
-                hdul[0].header.append(('DATE-OBS', date_time, "System Clock:Est. Frame Start -OR- GPS:Start Exposure"))
-                hdul[0].header.append(('EXPTIME', exp, "EXPOSURE in seconds"))
-                hdul.flush()
+            with fits.open(file_with_path, mode='update') as hdul:
+
+                hdul[0].header.update(wcs_header)
                 hdul.close()
+
+                # hdul[0].header = wcs_header
+                # hdul[0].header.append(('AUTHOR', "LKD UZhNU", 'Solved sucessfuly with astrometry.net'))
+                # hdul[0].header.append(('DATE-OBS', date_time, "System Clock:Est. Frame Start -OR- GPS:Start Exposure"))
+                # hdul[0].header.append(('EXPTIME', exp, "EXPOSURE in seconds"))
+                # hdul.flush()
+                # hdul.close()
 
         else:
             # Code to execute when solve fails
@@ -179,8 +196,8 @@ for fit_file in fl:
     # 5. make result in flux, Rmag, Mz ??????
     log_file.write('Begin star find procedure...\n')
 
-    header = fits.getheader(path + "//" + fit_file)
-    image_tmp = fits.getdata(path + "//" + fit_file)
+    header = fits.getheader(file_with_path)
+    image_tmp = fits.getdata(file_with_path)
 
     if dark_frame:
         dark_arr = fits.getdata(dark_frame)
