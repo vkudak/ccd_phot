@@ -91,8 +91,8 @@ path = os.path.dirname(db_file)
 log_file = open(os.path.join(path, 'star_calc.log'), "w")
 
 config = configparser.ConfigParser(inline_comment_prefixes="#")
-config.read(path + '//config_stars.ini')
-if os.path.isfile(path + '//config_stars.ini'):
+config.read(os.path.join(path, 'config_stars.ini'))
+if os.path.isfile(os.path.join(path, 'config_stars.ini')):
     try:
         kr = config.getfloat('Stars_Stand', 'K')
         max_m = config.get('Stars_Stand', 'max_m_calc', fallback="14")
@@ -127,7 +127,9 @@ if os.path.isfile(path + '//config_stars.ini'):
         print("Error in INI file\n", E)
         sys.exit()
 else:
-    print("Error. Cant find config_stars.ini in " + path + '//config_stars.ini')
+    print(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')}")
+    log_file.write(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')} \n")
+    sys.exit()
 
 max_m = float(max_m)
 
@@ -143,8 +145,8 @@ l_ar = []
 
 A_m_list = []
 A_mR_list = []
-frf = open("test.txt", "w")
-frfxy = open("test_xy.txt", "w")
+# frf = open("test.txt", "w")
+# frfxy = open("test_xy.txt", "w")
 
 for i in range(len(database)):
     # RMS filter#############################################################
@@ -183,6 +185,8 @@ for i in range(len(database)):
             (len(database[i]["Flux"]) > 5):
         m_inst = -2.5 * math.log10(database[i]["Flux_mean"]/exp)
 
+        # TODO: make two systems to solve with linReg. One for A and C, another for A and K coefficients
+
         if c_flag:
             # yq = database[i]["Rmag"] + m_inst - kr * database[i]["Mz"]
             yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
@@ -195,9 +199,9 @@ for i in range(len(database)):
                 yerr_ar.append(fi.std(axis=0))  # std from  2.5 * log10(Flux)
                 l_ar.append(database[i]["SimbadName"])
 
-                frfxy.write("%17s    %4.2f   %4.2f  %4.2f   %4.2f   %4.2f\n" %
-                            (database[i]["SimbadName"], database[i]["Rmag"], database[i]["V-R"],
-                             database[i]["Flux_mean"], database[i]["V-R"], database[i]["yq"]))
+                # frfxy.write("%17s    %4.2f   %4.2f  %4.2f   %4.2f   %4.2f\n" %
+                #             (database[i]["SimbadName"], database[i]["Rmag"], database[i]["V-R"],
+                #              database[i]["Flux_mean"], database[i]["V-R"], database[i]["yq"]))
                 database[i]["Good"] = ">Good<"
             else:
                 database[i]["Good"] = "low s/n"
@@ -209,14 +213,14 @@ for i in range(len(database)):
                 A_mR_list.append(database[i]["Rmag"])
                 database[i]["Good"] = True
         # # save to Fedorovich
-        Mz = database[i]["Mz"]
-        el2 = math.degrees(np.arccos(1 / Mz))
-        frf.write("%4.2f  %4.2f  %3.1f  %6i\n" % (database[i]["Rmag"], database[i]["V-R"], el2, int(database[i]["Flux_mean"])))
+        # Mz = database[i]["Mz"]
+        # el2 = math.degrees(np.arccos(1 / Mz))
+        # frf.write("%4.2f  %4.2f  %3.1f  %6i\n" % (database[i]["Rmag"], database[i]["V-R"], el2, int(database[i]["Flux_mean"])))
     else:
         database[i]["Good"] = "Bed"
 
-frf.close()
-frfxy.close()
+# frf.close()
+# frfxy.close()
 if c_flag:
     print("Stars left =", len(y_ar))
     log_file.write("Stars left = %i\n" % len(y_ar))
@@ -235,14 +239,14 @@ if c_flag:
     # r_max_val = 0.75
     while (r_max > r_max_val) and (len(y_ar) > 5):
         # if len(y_ar) > 5:
-        # c, a, r_max, ind, r2 = lsqFit(y_ar, x_ar)
-        # c_err = 99
-        # a_err = 99
+        c, a, r_max, ind, r2 = lsqFit(y_ar, x_ar)
+        c_err = 99
+        a_err = 99
 
         # with errors
-        aa, bb, r2, r_max, ind = fit_lin_reg(x_ar, y_ar, yerr_ar)
-        c, c_err = aa
-        a, a_err = bb
+        # aa, bb, r2, r_max, ind = fit_lin_reg(x_ar, y_ar, yerr_ar)
+        # c, c_err = aa
+        # a, a_err = bb
         ####################
 
         # a2, c2, r_sq = linReg(x_ar, y_ar)
@@ -268,7 +272,7 @@ if c_flag:
         # print(p2)
         plt.plot(p1, p2, "k")
         plt.xlabel("V-R")
-        plt.ylabel(r'$m_{st}+2.5 \cdot log(Flux)+K_{r} \cdot M_{z}$')
+        plt.ylabel(r'$m_{st}-m_{inst}-K_{r} \cdot M_{z}$')
         # plt.title(fit_file)
         # plt.show()
         plt.savefig(os.path.join(path, "graph_Cr.png"))

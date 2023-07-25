@@ -50,8 +50,8 @@ if ploting:
     # from astropy.visualization.mpl_normalize import ImageNormalize
 
 config = configparser.ConfigParser(inline_comment_prefixes="#")
-config.read(path + '//config_stars.ini')
-if os.path.isfile(path + '//config_stars.ini'):
+config.read(os.path.join(path,'config_stars.ini'))
+if os.path.isfile(os.path.join(path, 'config_stars.ini')):
     try:
         kr = config.getfloat('Stars_Stand', 'K')
         max_m = config.get('Stars_Stand', 'max_m_fit', fallback="14")
@@ -85,14 +85,14 @@ if os.path.isfile(path + '//config_stars.ini'):
         print("Error in INI file\n", E)
         sys.exit()
 else:
-    print("Error. Cant find config_stars.ini in " + path + '//config_stars.ini')
-
+    print(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')}")
+    log_file.write(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')} \n")
+    sys.exit()
 
 station = ephem.Observer()
-station.lat = site_lat  #'48.5635505'
-station.long = site_lon  #'22.453751'
-station.elevation = site_elev  #231.1325
-
+station.lat = site_lat  # '48.5635505'
+station.long = site_lon  # '22.453751'
+station.elevation = site_elev  # 231.1325
 
 list = os.listdir(path)
 fl = []
@@ -100,8 +100,12 @@ for fn in list:
     f = fn.split('.')
     if f[-1] in ['FIT', 'FITS', 'fit', 'fits']:
         fl.append(fn)
-
 fl.sort()
+
+if len(fl) == 0:
+    print("No FIT files to process. EXIT")
+    log_file.write("No FIT files to process. EXIT\n")
+    sys.exit()
 
 # print (fl)
 # fl = fl[0:15] + fl[55:70]
@@ -113,10 +117,8 @@ ast = AstrometryNet()
 
 ast.api_key = api_key
 
-
 if ploting:
     fig, ax = plt.subplots()
-
 
 A_general = []
 c_general = []
@@ -184,8 +186,8 @@ for fit_file in fl:
 
         else:
             # Code to execute when solve fails
-            print("Fail")
-            log_file.write("file NOT SOLVED\n")
+            print("Fail solving image")
+            log_file.write("FIT file NOT SOLVED\n")
 
     # BEGIN star find---------------------------------------------------------------
     # 1. Get RA DEC of image center
