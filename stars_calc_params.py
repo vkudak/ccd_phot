@@ -90,53 +90,17 @@ except Exception as E:
 path = os.path.dirname(db_file)
 log_file = open(os.path.join(path, 'star_calc.log'), "w")
 
-config = configparser.ConfigParser(inline_comment_prefixes="#")
-config.read(os.path.join(path, 'config_stars.ini'))
-if os.path.isfile(os.path.join(path, 'config_stars.ini')):
-    try:
-        kr = config.getfloat('Stars_Stand', 'K')
-        max_m = config.get('Stars_Stand', 'max_m_calc', fallback="14")
-        rms_val = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
-        r_max_val = config.getfloat('Stars_Stand', 'r_max_val', fallback=6.25)
-        c_flag = config.getboolean('Stars_Stand', 'calc_C', fallback=True)
-        snr_value = config.getfloat('Stars_Stand', 'snr', fallback=1.2)
-        if not c_flag:
-            Cr = config.getfloat('Stars_Stand', 'C')
 
-        dark_frame = config.get('Stars_Stand', 'dark_frame', fallback=False)
-        dark_stable = config.getfloat('Stars_Stand', 'dark_stable', fallback=0.0)
-
-        r_ap = config.getfloat('APERTURE', 'r_ap')
-        an_in = config.getfloat('APERTURE', 'an_in')
-        an_out = config.getfloat('APERTURE', 'an_out')
-
-        scale_min = config.getfloat('astrometry.net', 'scale_lower', fallback=1)
-        scale_max = config.getfloat('astrometry.net', 'scale_upper', fallback=20)
-        api_key = config.get('astrometry.net', 'api_key', fallback="No key")
-
-        if scale_max == 20 and scale_min == 1:
-            print("No 'astrometry.net' section in INI file. Using default astrometry.net params")
-            log_file.write("No 'astrometry.net' section in INI file. Using default astrometry.net params\n")
-
-        site_name = config.get('SITE', 'Name', fallback="No name")
-        site_lat = config.get('SITE', "lat")
-        site_lon = config.get('SITE', 'lon')
-        site_elev = config.getfloat('SITE', 'h')
-
-    except Exception as E:
-        print("Error in INI file\n", E)
-        sys.exit()
-else:
-    print(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')}")
-    log_file.write(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')} \n")
+conf = read_config_stars(os.path.join(path, 'config_stars.ini'), log_file)
+if not conf:
     sys.exit()
 
-max_m = float(max_m)
+max_m = float(conf['max_m'])
 
 station = ephem.Observer()
-station.lat = site_lat  #'48.5635505'
-station.long = site_lon  #'22.453751'
-station.elevation = site_elev  #231.1325
+station.lat = conf['site_lat']  #'48.5635505'
+station.long = conf['site_lon']  #'22.453751'
+station.elevation = conf['site_elev']  #231.1325
 
 y_ar = []
 x_ar = []
@@ -187,11 +151,11 @@ for i in range(len(database)):
 
         # TODO: make two systems to solve with linReg. One for A and C, another for A and K coefficients
 
-        if c_flag:
+        if conf['c_flag']:
             # yq = database[i]["Rmag"] + m_inst - kr * database[i]["Mz"]
-            yq = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"]
+            yq = database[i]["Rmag"] - m_inst - conf['kr'] * database[i]["Mz"]
             # if (yq < 17) and (yq > 14) and (database[i]["f/b"].mean(axis=0) > snr_value):
-            if database[i]["f/b"].mean(axis=0) > snr_value:
+            if database[i]["f/b"].mean(axis=0) > conf['snr_value']:
                 database[i]["yq"] = yq
                 y_ar.append(database[i]["yq"])
                 x_ar.append(database[i]["V-R"])
@@ -207,8 +171,12 @@ for i in range(len(database)):
                 database[i]["Good"] = "low s/n"
 
         else:
-            database[i]["A"] = database[i]["Rmag"] - m_inst - kr * database[i]["Mz"] - Cr * database[i]["V-R"]
-            if database[i]["f/b"].mean(axis=0) > snr_value:
+            database[i]["A"] = (database[i]["Rmag"] -
+                                m_inst -
+                                conf['kr'] * database[i]["Mz"] -
+                                conf['Cr'] * database[i]["V-R"]
+                                )
+            if database[i]["f/b"].mean(axis=0) > conf['snr_value']:
                 A_m_list.append(database[i]["A"])
                 A_mR_list.append(database[i]["Rmag"])
                 database[i]["Good"] = True
@@ -221,14 +189,14 @@ for i in range(len(database)):
 
 # frf.close()
 # frfxy.close()
-if c_flag:
+if conf['c_flag']:
     print("Stars left =", len(y_ar))
     log_file.write("Stars left = %i\n" % len(y_ar))
 else:
     print("Stars left =", len(A_m_list))
     log_file.write("Stars left = %i\n" % len(A_m_list))
 
-if c_flag:
+if conf['c_flag']:
     y_ar = np.array(y_ar)
     x_ar = np.array(x_ar)
 
@@ -237,7 +205,7 @@ if c_flag:
 
     r_max = 999
     # r_max_val = 0.75
-    while (r_max > r_max_val) and (len(y_ar) > 5):
+    while (r_max > conf['r_max_val']) and (len(y_ar) > 5):
         # if len(y_ar) > 5:
         c, a, r_max, ind, r2 = lsqFit(y_ar, x_ar)
         c_err = 99
@@ -284,7 +252,7 @@ if c_flag:
         log_file.write("A = %3.5f +/- %3.5f, c = %3.5f +/- %3.5f   R^2=%2.3f\n" % (a, a_err, c, c_err, r2))
         log_file.write("Lyambda_eff = %5.3f nm\n" % lya_eff)
         log_file.write("###--------------------------------------------------------------###\n")
-        if r_max > r_max_val:
+        if r_max > conf['r_max_val']:
             y_ar = np.delete(y_ar, ind)
             x_ar = np.delete(x_ar, ind)
             yerr_ar = np.delete(yerr_ar, ind)
@@ -296,7 +264,7 @@ if c_flag:
         # else:
         #     print("Only %i values. Cand perform LSQ_FIT...skipping frame" % len(y_ar))
         #     log_file.write("Only %i values. Cand perform LSQ_FIT...skipping frame\n" % len(y_ar))
-    if r_max > r_max_val:
+    if r_max > conf['r_max_val']:
         print("Only %i values. Cand perform LSQ_FIT...skipping filtering" % len(y_ar))
         log_file.write("Only %i values. Cand perform LSQ_FIT...skipping filtering\n" % len(y_ar))
 
@@ -333,14 +301,14 @@ else:
     plt.savefig(os.path.join(path, "graph_A1.png"))
     plt.close()
 
-    print("\nPerforming A rms<%3.5f filter" % rms_val)
-    log_file.write("\nPerforming A rms<%3.5f filter\n" % rms_val)
-    A_m_list, A_mR_list = RMS_del(A_m_list, rms_val, B=A_mR_list)
+    print("\nPerforming A rms<%3.5f filter" % conf['rms_val'])
+    log_file.write("\nPerforming A rms<%3.5f filter\n" % conf['rms_val'])
+    A_m_list, A_mR_list = RMS_del(A_m_list, conf['rms_val'], B=A_mR_list)
 
     plt.plot(A_mR_list, A_m_list, "xr")
     plt.xlabel(r'$m_R$')
     plt.ylabel("A")
-    plt.title("A value, filtered %s" % rms_val)
+    plt.title("A value, filtered %s" % conf['rms_val'])
     # plt.show()
     plt.savefig(os.path.join(path, "graph_A2.png"))
     plt.close()

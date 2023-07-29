@@ -12,7 +12,6 @@ import os
 from astroquery.astrometry_net import AstrometryNet
 from astropy.wcs import WCS
 import ephem
-import configparser
 import warnings
 from photometry_with_errors import *
 import pickle
@@ -49,58 +48,56 @@ if ploting:
     # from astropy.visualization import LogStretch
     # from astropy.visualization.mpl_normalize import ImageNormalize
 
-config = configparser.ConfigParser(inline_comment_prefixes="#")
-config.read(os.path.join(path,'config_stars.ini'))
-if os.path.isfile(os.path.join(path, 'config_stars.ini')):
-    try:
-        kr = config.getfloat('Stars_Stand', 'K')
-        max_m = config.get('Stars_Stand', 'max_m_fit', fallback="14")
-        rms_val = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
-        c_flag = config.getboolean('Stars_Stand', 'calc_C', fallback=True)
-        snr_value = config.getfloat('Stars_Stand', 'snr', fallback=1.2)
-        if not c_flag:
-            Cr = config.getfloat('Stars_Stand', 'C')
+# config = configparser.ConfigParser(inline_comment_prefixes="#")
+# config.read(os.path.join(path,'config_stars.ini'))
+# if os.path.isfile(os.path.join(path, 'config_stars.ini')):
+#     try:
+#         kr = config.getfloat('Stars_Stand', 'K')
+#         max_m = config.get('Stars_Stand', 'max_m_fit', fallback="14")
+#         rms_val = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
+#         c_flag = config.getboolean('Stars_Stand', 'calc_C', fallback=True)
+#         snr_value = config.getfloat('Stars_Stand', 'snr', fallback=1.2)
+#         if not c_flag:
+#             Cr = config.getfloat('Stars_Stand', 'C')
+#
+#         dark_frame = config.get('Stars_Stand', 'dark_frame', fallback=False)
+#         dark_stable = config.getfloat('Stars_Stand', 'dark_stable', fallback=0.0)
+#
+#         r_ap = config.getfloat('APERTURE', 'r_ap')
+#         an_in = config.getfloat('APERTURE', 'an_in')
+#         an_out = config.getfloat('APERTURE', 'an_out')
+#
+#         scale_min = config.getfloat('astrometry.net', 'scale_lower', fallback=1)
+#         scale_max = config.getfloat('astrometry.net', 'scale_upper', fallback=20)
+#         api_key = config.get('astrometry.net', 'api_key', fallback="No key")
+#
+#         if scale_max == 20 and scale_min == 1:
+#             print("No 'astrometry.net' section in INI file. Using default astrometry.net params")
+#             log_file.write("No 'astrometry.net' section in INI file. Using default astrometry.net params\n")
+#
+#         site_name = config.get('SITE', 'Name', fallback="No name")
+#         site_lat = config.get('SITE', "lat")
+#         site_lon = config.get('SITE', 'lon')
+#         site_elev = config.getfloat('SITE', 'h')
+#
+#     except Exception as E:
+#         print("Error in INI file\n", E)
+#         sys.exit()
+# else:
+#     print(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')}")
+#     log_file.write(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')} \n")
+#     sys.exit()
 
-        dark_frame = config.get('Stars_Stand', 'dark_frame', fallback=False)
-        dark_stable = config.getfloat('Stars_Stand', 'dark_stable', fallback=0.0)
-
-        r_ap = config.getfloat('APERTURE', 'r_ap')
-        an_in = config.getfloat('APERTURE', 'an_in')
-        an_out = config.getfloat('APERTURE', 'an_out')
-
-        scale_min = config.getfloat('astrometry.net', 'scale_lower', fallback=1)
-        scale_max = config.getfloat('astrometry.net', 'scale_upper', fallback=20)
-        api_key = config.get('astrometry.net', 'api_key', fallback="No key")
-
-        if scale_max == 20 and scale_min == 1:
-            print("No 'astrometry.net' section in INI file. Using default astrometry.net params")
-            log_file.write("No 'astrometry.net' section in INI file. Using default astrometry.net params\n")
-
-        site_name = config.get('SITE', 'Name', fallback="No name")
-        site_lat = config.get('SITE', "lat")
-        site_lon = config.get('SITE', 'lon')
-        site_elev = config.getfloat('SITE', 'h')
-
-    except Exception as E:
-        print("Error in INI file\n", E)
-        sys.exit()
-else:
-    print(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')}")
-    log_file.write(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')} \n")
+conf = read_config_stars(os.path.join(path, 'config_stars.ini'), log_file)
+if not conf:
     sys.exit()
 
 station = ephem.Observer()
-station.lat = site_lat  # '48.5635505'
-station.long = site_lon  # '22.453751'
-station.elevation = site_elev  # 231.1325
+station.lat = conf['site_lat']  # '48.5635505'
+station.long = conf['site_lon']  # '22.453751'
+station.elevation = conf['site_elev']  # 231.1325
 
-list = os.listdir(path)
-fl = []
-for fn in list:
-    f = fn.split('.')
-    if f[-1] in ['FIT', 'FITS', 'fit', 'fits']:
-        fl.append(fn)
-fl.sort()
+fl = get_file_list(path)
 
 if len(fl) == 0:
     print("No FIT files to process. EXIT")
@@ -115,7 +112,7 @@ if len(fl) == 0:
 ast = AstrometryNet()
 # ast.show_allowed_settings()
 
-ast.api_key = api_key
+ast.api_key = conf['api_key']
 
 if ploting:
     fig, ax = plt.subplots()
@@ -156,8 +153,8 @@ for fit_file in fl:
                                                       downsample_factor=2,
                                                       scale_units="arcsecperpix",
                                                       scale_type='ul',
-                                                      scale_upper=scale_max,
-                                                      scale_lower=scale_min,
+                                                      scale_upper=conf['scale_max'],
+                                                      scale_lower=conf['scale_min'],
                                                       tweak_order=3)
                 else:
                     wcs_header = ast.monitor_submission(submission_id, solve_timeout=120)
@@ -201,15 +198,15 @@ for fit_file in fl:
     header = fits.getheader(file_with_path)
     image_tmp = fits.getdata(file_with_path)
 
-    if dark_frame:
-        dark_arr = fits.getdata(dark_frame)
+    if conf['dark_frame']:
+        dark_arr = fits.getdata(conf['dark_frame'])
         image_tmp = image_tmp - dark_arr
         ph_image = image_tmp
 
         minI = np.min(image_tmp)
         if minI < 0:
-            print("Warning! Image - Dark has negativ pixels...")
-            log_file.write("Warning! Image - Dark has negativ pixels...\n")
+            print("Warning! Image - Dark has negative pixels...")
+            log_file.write("Warning! Image - Dark has negative pixels...\n")
     else:
         ph_image = image_tmp
         mean, median, std = sigma_clipped_stats(image_tmp, sigma=3.0)
@@ -222,10 +219,10 @@ for fit_file in fl:
 
     w = WCS(header)
     ra_c, dec_c = w.wcs_pix2world(xc, yc, 1)  # RA DEC of FRAME center
-    print("Grab stars from Vizier (Vmag<%s)...." % max_m)
-    log_file.write("Grab stars from Vizier (Vmag<%s)....\n" % max_m)
+    print("Grab stars from Vizier (Vmag<%s)...." % conf['max_m'])
+    log_file.write("Grab stars from Vizier (Vmag<%s)....\n" % conf['max_m'])
 
-    table_res = get_from_LAND(ra_c, dec_c, radius="3.0deg", Filter={'Vmag': '<' + max_m})
+    table_res = get_from_LAND(ra_c, dec_c, radius="3.0deg", Filter={'Vmag': '<' + conf['max_m']})
     # print(table_res)
     # sys.exit()
     # table_res = table_res["I/297/out"]  # get NOMAD data
@@ -253,7 +250,7 @@ for fit_file in fl:
         plt.imshow(image_tmp, cmap='Greys', origin='lower')
 
     star_count = 0
-    if not c_flag:
+    if not conf['c_flag']:
         log_file.write("   SimbadName         Vmag       Rmag         Flux         A        Mz         X           Y\n")
     else:
         log_file.write("   SimbadName         Vmag       Rmag      V-R            Flux       Flux_err     bkg          snr      Mz       X         Y\n")
@@ -274,7 +271,7 @@ for fit_file in fl:
                 star_count = star_count + 1
 
                 if ploting:
-                    fc = Circle((xs, ys), r_ap, facecolor='none', edgecolor='blue', linewidth=1, fill=False)
+                    fc = Circle((xs, ys), conf['r_ap'], facecolor='none', edgecolor='blue', linewidth=1, fill=False)
                     ax.add_patch(fc)
 
                 # fit on xs, ys and measure flux
@@ -285,8 +282,8 @@ for fit_file in fl:
                     targ_star = fit_m(image_tmp, int(xs), int(ys), gate=5, debug=False, fig_name=figname, centring=True, silent=True)
 
                     positions = targ_star[:2]
-                    aperture = CircularAperture(positions, r=r_ap)
-                    annulus_aperture = CircularAnnulus(positions, r_in=an_in, r_out=an_out)
+                    aperture = CircularAperture(positions, r=conf['r_ap'])
+                    annulus_aperture = CircularAnnulus(positions, r_in=conf['an_in'], r_out=conf['an_out'])
                     phot_table = iraf_style_photometry(aperture, annulus_aperture, ph_image)
 
                     # print(phot_table)
@@ -323,7 +320,7 @@ for fit_file in fl:
                     Mz = 1 / (math.cos(math.pi / 2 - el))
 
                     if (flux > 0) and (vmr is not masked) and (abs(row["V-R"]) < 2):
-                        if c_flag:
+                        if conf['c_flag']:
                             fs = str.format("{0:" ">10.3f}", flux)
                             fes = str.format("{0:" ">8.3f}", flux_err)
                             fbs = str.format("{0:" ">10.3f}", fb)
@@ -332,7 +329,7 @@ for fit_file in fl:
                             Mzs = str.format("{0:" ">3.3f}", Mz)
                             xxs = str.format("{0:" ">8.3f}", xx)
                             yys = str.format("{0:" ">8.3f}", yy)
-                            if snr < snr_value:  # print "*" on bed star
+                            if snr < conf['snr_value']:  # print "*" on bed star
                                 log_file.write("%17s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s*  %5s %8s %8s\n" %
                                                (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                             else:
@@ -340,7 +337,7 @@ for fit_file in fl:
                                                (row["SimbadName"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
                         else:
                             m_inst = -2.5 * math.log10(flux/exp)
-                            A = row["Rmag"] - m_inst - (kr * Mz) - Cr * vmr  # <------------------ A
+                            A = row["Rmag"] - m_inst - (conf['kr'] * Mz) - conf['Cr'] * vmr  # <------------------ A
 
                             # print ("%8.5f  %8.5f  %10.5f  %8.5f  %8.5f" % (row["Vmag"], math.degrees(el), Mz, ra_s, dec_s))
                             fs = str.format("{0:" ">10.5f}", flux)
@@ -352,15 +349,15 @@ for fit_file in fl:
                             log_file.write("%17s   %8.3f  %8.3f  %15s   %8.5f %8s %10s  %10s\n" % (row["SimbadName"], row["Vmag"], row["Rmag"], fs, A, Mzs, xxs, yys))
 
                             if ploting:
-                                circle = Circle((xx, yy), r_ap, facecolor='none', edgecolor='green', linewidth=1, fill=False)
-                                r_in = Circle((xx, yy), an_in, facecolor='none', edgecolor='red', linewidth=1, fill=False)
-                                r_out = Circle((xx, yy), an_out, facecolor='none', edgecolor='red', linewidth=1, fill=False)
+                                circle = Circle((xx, yy), conf['r_ap'], facecolor='none', edgecolor='green', linewidth=1, fill=False)
+                                r_in = Circle((xx, yy), conf['an_in'], facecolor='none', edgecolor='red', linewidth=1, fill=False)
+                                r_out = Circle((xx, yy), conf['an_out'], facecolor='none', edgecolor='red', linewidth=1, fill=False)
                                 ax.add_patch(circle)
                                 ax.add_patch(r_in)
                                 ax.add_patch(r_out)
                             # sys.exit()
 
-                    if snr > snr_value:
+                    if snr > conf['snr_value']:
                         # check if exist in DB
                         exist = False
                         save_ind = None

@@ -6,6 +6,7 @@ import sys
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 import matplotlib
+
 matplotlib.use('Agg')
 from matplotlib.patches import Circle
 import ephem
@@ -16,6 +17,7 @@ from astroquery.vizier import Vizier
 import astropy.coordinates as coord
 from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
+import configparser
 
 
 def substract(image, dark=None, value=None):
@@ -48,8 +50,8 @@ def fit_lin_reg(x, y, yerr):
     ae, be = np.sqrt(pconv.diagonal())
 
     residuals = y - linear(x, *popt)
-    ss_res = np.sum(residuals**2)
-    ss_tot = np.sum((y - np.mean(y))**2)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y - np.mean(y)) ** 2)
     r2 = 1 - (ss_res / ss_tot)
 
     res = []
@@ -137,7 +139,8 @@ def del_var(table, Filter={'Vmag': '<10'}):
         ra = row["RAJ2000"]
         dec = row["DEJ2000"]
         c = coord.SkyCoord(ra=ra * u.degree, dec=dec * u.degree, frame='icrs')
-        var_table = Vizier.query_region(c, radius='0d0m3s', catalog=["GCVS"], column_filters=Filter)  # , catalog=["GCVS"]
+        var_table = Vizier.query_region(c, radius='0d0m3s', catalog=["GCVS"],
+                                        column_filters=Filter)  # , catalog=["GCVS"]
         var_table_len = len(var_table)
         if var_table_len > 0:
             table_final.remove_row(i)
@@ -151,8 +154,8 @@ def gaussian(xycoor, x0, y0, sigma, amp):
     '''This Function is the Gaussian Function'''
 
     x, y = xycoor  # x and y taken from fit function.  Stars at 0, increases by 1, goes to length of axis
-    A = 1 / (2 * sigma**2)
-    eq = amp * np.exp(-A * ((x - x0)**2 + (y - y0)**2))  # Gaussian
+    A = 1 / (2 * sigma ** 2)
+    eq = amp * np.exp(-A * ((x - x0) ** 2 + (y - y0) ** 2))  # Gaussian
     return eq
 
 
@@ -184,7 +187,8 @@ def fit(image, mf=None):
     # upper = [image.shape[0], image.shape[1], sigma * 100.0, np.max(image) * 0.5]
     bounds = [low, upper]
 
-    params, pcov = curve_fit(gaussian, (xx.ravel(), yy.ravel()), image.ravel(), p0=guess, bounds=bounds, maxfev=mf)  # optimal fit.  Not sure what pcov is.
+    params, pcov = curve_fit(gaussian, (xx.ravel(), yy.ravel()), image.ravel(), p0=guess, bounds=bounds,
+                             maxfev=mf)  # optimal fit.  Not sure what pcov is.
 
     # par, cov, infodict, mesg, ier = optimize.leastsq(residuals, a_guess, args=(x,y),full_output=True)
     # params, pcov = curve_fit(gaussian, (xx.ravel(), yy.ravel()), image.ravel(), p0=guess, bounds=bounds)  #optimal fit.  Not sure what pcov is.
@@ -207,7 +211,8 @@ def plotting(image, params, save=False, filename=None, par=None, err=None, tar=N
             # plt.title("parameters= %s \nerrors=%s \ngate=%s" % (par[:2], par[2:], gate), pad=-50, fontsize=10)
 
             x, y = tar[:2]
-            plt.title("parameters= %s \nerrors=%s \ngate=%s  x,y=%2.3f, %2.3f" % (par, err, gate, x, y), pad=-50, fontsize=10)
+            plt.title("parameters= %s \nerrors=%s \ngate=%s  x,y=%2.3f, %2.3f" % (par, err, gate, x, y), pad=-50,
+                      fontsize=10)
             plt.savefig(filename)
         else:
             plt.show()
@@ -267,21 +272,28 @@ def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=Fals
     return target
 
 
-def get_tle(tle_path):
-    TLE_list = []
-    ephf = open(tle_path, 'r')
+def get_tle(tle_path: str) -> list:
+    """
+    Read file with TLE
+
+    Parameters
+    ----------
+    :param str tle_path : path to tle file
+    """
+    tle_list = []
+    tle_file = open(tle_path, 'r')
     i = 1
     tle1 = []
-    for l in ephf:
-        if l != '':
-            tle1.append(l.strip())
+    for line in tle_file:
+        if line != '':
+            tle1.append(line.strip())
             i = i + 1
             if i > 3:
-                TLE_list.append(tle1)
+                tle_list.append(tle1)
                 tle1 = []
                 i = 1
-    ephf.close()
-    return TLE_list
+    tle_file.close()
+    return tle_list
 
 
 def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
@@ -338,6 +350,7 @@ def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
                 el = math.degrees(sat.alt)
                 rg = sat.range / 1000.0  # km
                 az = math.degrees(sat.az)
+                n = n.lstrip("0 ")
                 return el, rg, az, n, no, c, tle
             else:
                 print('\nCan not find TLE for such satellite !!!')
@@ -363,3 +376,160 @@ def word_in_hfield(word, h_field):
     except TypeError:
         # return False if h_field does not  exist ('NoneType')
         return False
+
+
+def read_config_stars(conf_file, log_file):
+    """
+    Read stars config file
+    Parameters
+    conf_file: path to config file
+    log_file: opened for write text file instance
+    Returns
+    -------
+    res: dictionary with parameters
+    """
+    config = configparser.ConfigParser(inline_comment_prefixes="#")
+    res = {}
+    if os.path.isfile(conf_file):
+        try:
+            config.read(conf_file)
+            res['kr'] = config.getfloat('Stars_Stand', 'K')
+            res['max_m'] = config.get('Stars_Stand', 'max_m_fit', fallback="14")
+            res['rms_val'] = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
+            res['r_max_val'] = config.getfloat('Stars_Stand', 'r_max_val', fallback=6.25)
+            res['c_flag'] = config.getboolean('Stars_Stand', 'calc_C', fallback=True)
+            res['snr_value'] = config.getfloat('Stars_Stand', 'snr', fallback=1.2)
+            if not res['c_flag']:
+                res['Cr'] = config.getfloat('Stars_Stand', 'C')
+
+            res['dark_frame'] = config.get('Stars_Stand', 'dark_frame', fallback=False)
+            res['dark_stable'] = config.getfloat('Stars_Stand', 'dark_stable', fallback=0.0)
+
+            res['r_ap'] = config.getfloat('APERTURE', 'r_ap')
+            res['an_in'] = config.getfloat('APERTURE', 'an_in')
+            res['an_out'] = config.getfloat('APERTURE', 'an_out')
+
+            res['scale_min'] = config.getfloat('astrometry.net', 'scale_lower', fallback=1)
+            res['scale_max'] = config.getfloat('astrometry.net', 'scale_upper', fallback=20)
+            res['api_key'] = config.get('astrometry.net', 'api_key', fallback="No key")
+
+            if res['scale_max'] == 20 and res['scale_min'] == 1:
+                print("No 'astrometry.net' section in INI file. Using default astrometry.net params")
+                log_file.write("No 'astrometry.net' section in INI file. Using default astrometry.net params\n")
+
+            res['site_name'] = config.get('SITE', 'Name', fallback="No name")
+            res['site_lat'] = config.get('SITE', "lat")
+            res['site_lon'] = config.get('SITE', 'lon')
+            res['site_elev'] = config.getfloat('SITE', 'h')
+
+            return res
+
+        except Exception as E:
+            print("Error in INI file\n", E)
+            return False
+    else:
+        print(f"Error. Cant find config_stars.ini in {conf_file}")
+        log_file.write(f"Error. Cant find config_stars.ini in {conf_file} \n")
+        return False
+
+
+def read_config_sat(conf_file):
+    """
+    Args:
+        conf_file (str): Full path to config file
+
+    Returns:
+        res (dict, bool): dict of parameters OR False
+    """
+
+    config = configparser.ConfigParser(inline_comment_prefixes="#")
+    res = {}
+
+    if os.path.isfile(conf_file):
+        try:
+            config.read(conf_file)
+
+            res['cospar'] = config['NAME']['COSPAR']
+            res['norad'] = config['NAME']['NORAD']
+            res['name'] = config['NAME']['NAME']
+
+            res['tle_file'] = config.get('TLE', 'tle_file')
+
+            res['A'] = float(config['STD']['A'])
+            res['k'] = float(config['STD']['k'])
+            res['gate'] = int(config['STD']['gate'])
+
+            band = config.get('STD', 'Filter', fallback="F")
+            res['Filter'] = band.strip()
+
+            time_format = config.get('STD', 'Time_format', fallback="UT")
+            res['time_format'] = time_format.strip()
+
+            res['min_real_mag'] = config.getfloat('STD', 'min_real_mag', fallback=15.0)
+            res['max_center_error'] = config.getfloat('STD', 'max_center_err', fallback=2.0)
+
+            res['dark_frame'] = config.get('STD', 'dark_frame', fallback=False)
+
+            res['r_ap'] = float(config['APERTURE']['ap'])
+            res['an_in'] = float(config['APERTURE']['an_in'])
+            res['an_out'] = float(config['APERTURE']['an_out'])
+
+            res['site_name'] = config['SITE']['Name']
+            res['site_lat'] = config['SITE']['lat']
+            res['site_lon'] = config['SITE']['lon']
+            res['site_elev'] = float(config['SITE']['h'])
+
+            return res
+
+        except Exception as E:
+            print("Error in INI file\n", E)
+            return False
+    else:
+        print("Error. Cant find config_sat.ini in " + conf_file)
+        return False
+
+
+def get_file_list(path):
+    """
+    Args:
+        path (str): directory where to search FITS files
+    Returns:
+        fl (list): sorted list of files (with paths)
+    """
+    fl = []
+    for file_name in os.listdir(path):
+        f = file_name.split('.')
+        if f[-1] in ['FIT', 'FITS', 'fit', 'fits']:
+            fl.append(file_name)
+    fl.sort()
+    return fl
+
+
+def calc_mag(flux, el, rg, zp, k, exp, min_mag=15):
+    """
+    Parameters
+    ----------
+    :param float flux: Flux
+    :param float el: elevation in degrees
+    :param float rg: Range to satellite
+    :param float zp: Zero point of System
+    :param float k: coefficient of extinction
+    :param float exp: Exposition
+    :param min_mag: minimum reachable magnitude
+
+    Returns
+    -------
+    m (float): standard magnitude
+
+    """
+    if flux < 0:
+        m = min_mag
+        return m
+    else:
+        m_inst = -2.5 * math.log10(flux / exp)
+        mz = 1 / (math.cos(math.pi / 2 - math.radians(el)))  # 1/cos(90-el)
+        mr = -5 * math.log10(rg / 1000.0)
+        mzr = k * mz
+
+        m = zp + m_inst + mzr + mr
+    return m

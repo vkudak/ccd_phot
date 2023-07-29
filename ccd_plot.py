@@ -37,7 +37,7 @@ def read_name(filename):
     dt = "none"
 
     with open(filename) as myfile:
-        head = [next(myfile) for x in range(10)]
+        head = [next(myfile) for x in range(20)]
     # print(head)
     # print("---------------------------------"
     for line in head:
@@ -49,12 +49,14 @@ def read_name(filename):
             norad = line[3]
         if line[1].strip() == "NAME":
             name = " ".join(line[3:])
+            name = name.lstrip('0 ')
         if line[1].strip() == "dt":
             dt = line[3]
     return cospar, norad, name, dt
 
 
 cospar, norad, name, dt = read_name(filename)
+
 dt = float(dt)
 # print(cospar, norad, name, dt)
 
