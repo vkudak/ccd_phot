@@ -113,12 +113,15 @@ for fit_file in fl:
         fr.write("# %s\n" % tle_lines[2])
 
         date, time = date_time.split("T")
-        fr.write("# %s %s\n" % (date, time))
+        fr.write("# %s %s\n" % (date, time))  # exp corrected start date_time
 
         header_last = fits.getheader(path + "//" + fl[-1])
-        date_time9 = header.get('DATE-OBS')
-        date9, time9 = date_time9.split("T")
-        fr.write("# %s %s\n" % (date9, time9))
+        date_time_last = header_last.get('DATE-OBS')
+        date_time_last = datetime.strptime(date_time_last[:-1], "%Y-%m-%dT%H:%M:%S.%f")
+        date_time_last = date_time_last + timedelta(seconds=float(exp / 2.0))
+        date_time_last = date_time_last.strftime("%Y-%m-%dT%H:%M:%S.%f")
+        date_last, time_last = date_time_last.split("T")
+        fr.write("# %s %s\n" % (date_last, time_last))   # exp corrected last date_time
 
         # take EXPTIME from the middle of LC
         exp_header = fits.getheader(path + "//" + fl[int(len(fl)/2)])
@@ -136,10 +139,10 @@ for fit_file in fl:
 
         if conf['time_format'] == "UT":
             fr.write(f"#  Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err")
-            fr.write(f"     mag{conf['Filter']}  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
+            fr.write(f"     mag{conf['Filter']}  mag_err     Az(deg)   El(deg)   Rg(Km)    filename\n")
         else:
             fr.write(f"#      JD                     X          Y         Xerr      Yerr             Flux     Flux_err")
-            fr.write(f"     mag{conf['Filter']}  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n")
+            fr.write(f"     mag{conf['Filter']}  mag_err     Az(deg)   El(deg)   Rg(Km)    filename\n")
 
     ##################################
 

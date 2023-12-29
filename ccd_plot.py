@@ -24,6 +24,7 @@ try:
     filt = filt.strip("\n")
     filt = filt.strip("\t")
     filt = filt.strip("\r")
+    plot_errors = config.getboolean('STD', 'plot_errors', fallback=False)
 except Exception as e:
     print(e)
     filt = "None"
@@ -63,14 +64,14 @@ dt = float(dt)
 date_time = []
 
 if time_format == "UT":
-    flux, mR, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(6, 8, 10, 11), unpack=True)
+    flux, f_err, mR, m_err, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(6, 7, 8, 9, 10, 11), unpack=True)
     date, time = np.genfromtxt(filename, unpack=True, skip_header=True, usecols=(0, 1), dtype=None, encoding="utf-8")
 
     for i in range(0, len(date)):
         # date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
         date_time.append(datetime.strptime(date[i] + ' ' + time[i] + "000", "%Y-%m-%d %H:%M:%S.%f"))
 else:  # JD
-    flux, mR, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(5, 7, 9, 10), unpack=True)
+    flux, f_err, mR, m_err, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(5, 6, 7, 8, 9, 10), unpack=True)
     jd = np.genfromtxt(filename, unpack=True, skip_header=True, usecols=(0,), dtype=None, encoding="utf-8")
     jd = [float(x) for x in jd]
     jd = Time(jd, format='jd', scale='utc')
@@ -96,7 +97,11 @@ plt.rcParams['figure.figsize'] = [12, 6]
 dm = max(mR) - min(mR)
 dm = dm * 0.1
 plt.axis([min(date_time), max(date_time), max(mR) + dm , min(mR) - dm])
-plt.plot(date_time, mR, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
+
+if plot_errors:
+    plt.errorbar(date_time, mR, yerr=m_err, fmt='xr-', linewidth=0.8, fillstyle="none", markersize=3, capsize=3)
+else:
+    plt.plot(date_time, mR, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
@@ -156,8 +161,11 @@ dm = max(flux) - min(flux)
 dm = dm * 0.1
 # print(flux[0])
 plt.axis([min(date_time), max(date_time), min(flux) - dm, max(flux) + dm])
-plt.plot(date_time, flux, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
+if plot_errors:
+    plt.errorbar(date_time, flux, yerr=f_err, fmt='xr-', linewidth=0.8, fillstyle="none", markersize=3, capsize=3)
+else:
+    plt.plot(date_time, flux, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
 
 d, t = str(date_time[0]).split(" ")
 plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%2.3f  Filter=%s" % (name, norad, cospar, d, t, dt, filt), pad=6, fontsize=12)
