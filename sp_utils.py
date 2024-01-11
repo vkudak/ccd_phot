@@ -10,7 +10,7 @@ import matplotlib
 matplotlib.use('Agg')
 from matplotlib.patches import Circle
 import ephem
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
 from astropy import units as u
 from astroquery.vizier import Vizier
@@ -533,3 +533,21 @@ def calc_mag(flux, el, rg, zp, k, exp, min_mag=15):
 
         m = zp + m_inst + mzr + mr
     return m
+
+
+def fix_datetime(date_time):
+    """
+    Fixes datetime with wrong seconds (sec = 60)
+    TIME format must be '2024-01-10T18:07:60.00000'
+
+    Args:
+        :param str date_time: DATE-OBS from header
+    Return:
+        Corrected datetime as str
+    """
+    if date_time[17:19] == '60':  # wrong time in sec section
+        date_time = date_time[:17] + "00" + date_time[19:]
+        date_time = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
+        date_time = date_time + timedelta(minutes=1)
+        date_time = date_time.strftime("%Y-%m-%dT%H:%M:%S.%f")
+    return date_time

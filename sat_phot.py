@@ -83,6 +83,9 @@ for fit_file in fl:
     if date_time == '0001-01-01T00:00:00.0000000':
         date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
 
+    # Fix sec=60
+    date_time = fix_datetime(date_time)
+
     # correction DATE_TIME, datetime = datetime + exp / 2
     date_time = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
     date_time = date_time + timedelta(seconds=float(exp/2.0))
@@ -116,7 +119,7 @@ for fit_file in fl:
         fr.write("# %s %s\n" % (date, time))  # exp corrected start date_time
 
         header_last = fits.getheader(path + "//" + fl[-1])
-        date_time_last = header_last.get('DATE-OBS')
+        date_time_last = fix_datetime(header_last.get('DATE-OBS'))
         date_time_last = datetime.strptime(date_time_last[:-1], "%Y-%m-%dT%H:%M:%S.%f")
         date_time_last = date_time_last + timedelta(seconds=float(exp / 2.0))
         date_time_last = date_time_last.strftime("%Y-%m-%dT%H:%M:%S.%f")
