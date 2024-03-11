@@ -35,6 +35,11 @@ if not conf:
 tle_list = get_tle(conf['tle_file'])
 
 fl = get_file_list(path)
+# print('Sorting FITS by name...')
+
+if conf['fits_sort'] not in ['name', 'None']:
+    print(f'Sorting FITS files by header {conf["fits_sort"]} ...')
+    fl = sort_file_list(path, fl, field=conf['fits_sort'])
 
 debug = True
 

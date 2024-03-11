@@ -13,6 +13,7 @@ import ephem
 from datetime import datetime, timedelta
 import math
 from astropy import units as u
+from astropy.io import fits
 from astroquery.vizier import Vizier
 import astropy.coordinates as coord
 from tqdm import tqdm
@@ -467,6 +468,7 @@ def read_config_sat(conf_file):
 
             res['min_real_mag'] = config.getfloat('STD', 'min_real_mag', fallback=15.0)
             res['max_center_error'] = config.getfloat('STD', 'max_center_err', fallback=2.0)
+            res['fits_sort'] = config.get('STD', 'fits_sort', fallback='None')
 
             res['dark_frame'] = config.get('STD', 'dark_frame', fallback=False)
 
@@ -503,6 +505,33 @@ def get_file_list(path):
             fl.append(file_name)
     fl.sort()
     return fl
+
+
+def sort_file_list(path, fl, field='DATE-OBS'):
+    """
+    Sort FITS file list according to field in fits header (default field: 'DATE-OBS')
+
+    Parameters
+    ----------
+    path: path to files
+    fl: file list to sort
+    field: parameter to sort by (from header)
+
+    Returns
+    -------
+    fl: sorted file list
+    """
+    sort_list = []
+    for f in fl:
+        header = fits.getheader(os.path.join(path, f))
+        tt = header.get(field)
+        if tt is not None:
+            sort_list.append([f, tt])
+        else:
+            sort_list.append([f, 0])
+    sort_list.sort(key=lambda x: x[1])  # sort by second element in [name, time]
+    sort_list = [f[0] for f in sort_list]
+    return sort_list
 
 
 def calc_mag(flux, el, rg, zp, k, exp, min_mag=15):
