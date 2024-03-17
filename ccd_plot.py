@@ -1,5 +1,6 @@
 #!python3.8
 import sys
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -9,7 +10,7 @@ from astropy.time import Time
 
 
 filename = sys.argv[1]
-import os
+
 # cwd = os.getcwd()
 wd = os.path.dirname(filename)
 # print(wd)
@@ -24,7 +25,7 @@ try:
     filt = filt.strip("\n")
     filt = filt.strip("\t")
     filt = filt.strip("\r")
-    plot_errors = config.getboolean('STD', 'plot_errors', fallback=False)
+    plot_errors = config.getboolean('PLOT', 'plot_errors', fallback=False)
 except Exception as e:
     print(e)
     filt = "None"
@@ -37,7 +38,7 @@ def read_name(filename):
     name = "none"
     dt = "none"
 
-    with open(filename) as myfile:
+    with open(filename, "r") as myfile:
         head = [next(myfile) for x in range(20)]
     # print(head)
     # print("---------------------------------"

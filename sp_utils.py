@@ -481,6 +481,10 @@ def read_config_sat(conf_file):
             res['site_lon'] = config['SITE']['lon']
             res['site_elev'] = float(config['SITE']['h'])
 
+            res["auto_plot"] = config.getboolean('PLOT', 'auto_plot', fallback=False)
+            res["plot_command"] = config.get('PLOT', 'plot_command', fallback='None')
+            res["python"] = config.get('PLOT', 'python', fallback='None')
+
             return res
 
         except Exception as E:

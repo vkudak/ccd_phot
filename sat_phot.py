@@ -12,6 +12,7 @@ import glob
 import sys
 import os
 import warnings
+import subprocess
 # import matplotlib
 # matplotlib.use('Agg')
 
@@ -66,9 +67,11 @@ ymd = ymd.replace("-", "")
 ##############
 
 if conf['norad'] != "":
-    fr = open(path + "//result_" + conf['norad'] + "_" + ymd + "_UT" + ut1 + ".ph" + conf['Filter'], "w")
+    res_path = os.path.join(path, "result_" + conf['norad'] + "_" + ymd + "_UT" + ut1 + ".ph" + conf['Filter'])
 else:
-    fr = open(path + "//result" + "_" + ymd + "_UT" + ut1 + ".ph" + conf['Filter'], "w")
+    res_path = os.path.join(path, "result" + "_" + ymd + "_UT" + ut1 + ".ph" + conf['Filter'])
+
+fr = open(res_path, "w")
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
 
 # from tqdm.auto import tqdm
@@ -346,3 +349,10 @@ for fit_file in fl:
         # ax.add_patch(circle)
         # plt.show()
         # plt.close('all')
+fr.close()
+print("Photometry is DONE.")
+
+if conf['auto_plot']:
+    print("Plotting Lightcurve...", end="")
+    subprocess.run([conf["python"], conf["plot_command"], res_path])
+    print("DONE.")
