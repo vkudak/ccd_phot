@@ -495,6 +495,61 @@ def read_config_sat(conf_file):
         return False
 
 
+def read_config_star_flux(conf_file):
+    """
+    Args:
+        conf_file (str): Full path to config file
+
+    Returns:
+        res (dict, bool): dict of parameters OR False
+    """
+
+    config = configparser.ConfigParser(inline_comment_prefixes="#")
+    res = {}
+
+    if os.path.isfile(conf_file):
+        try:
+            config.read(conf_file)
+
+            res['star_name'] = config['MAIN']['star_name']
+            res['ra'] = config.get('MAIN',"RA", fallback=None)
+            res['dec'] = config.get('MAIN',"DEC", fallback=None)
+
+            res['A'] = float(config['STD']['A'])
+            res['k'] = float(config['STD']['k'])
+            res['gate'] = int(config['STD']['gate'])
+
+            band = config.get('STD', 'Filter', fallback="F")
+            res['Filter'] = band.strip()
+
+            time_format = config.get('STD', 'Time_format', fallback="UT")
+            res['time_format'] = time_format.strip()
+
+            res['min_real_mag'] = config.getfloat('STD', 'min_real_mag', fallback=15.0)
+            res['max_center_error'] = config.getfloat('STD', 'max_center_err', fallback=2.0)
+            res['fits_sort'] = config.get('STD', 'fits_sort', fallback='None')
+
+            res['dark_frame'] = config.get('STD', 'dark_frame', fallback=False)
+
+            res['r_ap'] = float(config['APERTURE']['ap'])
+            res['an_in'] = float(config['APERTURE']['an_in'])
+            res['an_out'] = float(config['APERTURE']['an_out'])
+
+            res['site_name'] = config['SITE']['Name']
+            res['site_lat'] = config['SITE']['lat']
+            res['site_lon'] = config['SITE']['lon']
+            res['site_elev'] = float(config['SITE']['h'])
+
+            return res
+
+        except Exception as E:
+            print("Error in INI file\n", E)
+            return False
+    else:
+        print("Error. Cant find config_sat.ini in " + conf_file)
+        return False
+
+
 def get_file_list(path):
     """
     Args:
@@ -584,3 +639,43 @@ def fix_datetime(date_time):
         date_time = date_time + timedelta(minutes=1)
         date_time = date_time.strftime("%Y-%m-%dT%H:%M:%S.%f")
     return date_time
+
+
+def get_star_el(star_name, obs_lat, obs_lon, obs_elev, obs_date, star_ra_dec=None):
+    """
+
+    Parameters
+    ----------
+    star_name: name of star. Optional
+    obs_lat, obs_lon, obs_elev: latitude and longitude of observatory (string). Example '52.5', '-1.91667', '223.3'
+    obs_date: date of observation (datetime)
+    star_ra_dec: ra/dec of star in a form of [ra, dec]. Example ['10:10:10', '+10:10:10']. Optional
+
+    Returns
+    -------
+    az, el: star azimuth and elevation in degrees
+    """
+    if star_ra_dec is None:
+        star_ra_dec = [0, 0]
+        result = Vizier.query_object(star_name, catalog=['FK5'])[0]
+        star_ra_dec[0] = result['RAJ2000'].value.data[0]  # str
+        star_ra_dec[0] = star_ra_dec[0].replace(" ", ":")
+
+        star_ra_dec[1] = result['DEJ2000'].value.data[0]
+        star_ra_dec[1] = star_ra_dec[1].replace(" ", ":")
+
+    star = ephem.FixedBody()
+    star._ra = ephem.hours(star_ra_dec[0]) #('10:10:10')
+    star._dec = ephem.degrees(star_ra_dec[1]) #('10:10:10')
+
+    observer = ephem.Observer()
+    observer.date = datetime.strptime(obs_date, "%Y-%m-%dT%H:%M:%S.%f0")
+
+    # longitude = ephem.degrees('-1.91667')
+    observer.lon = ephem.degrees(obs_lon)
+    observer.lat = ephem.degrees(obs_lat)
+    observer.elev = float(obs_elev)
+
+    star.compute(observer)
+
+    return star.az / ephem.degree, star.alt / ephem.degree  # float in degrees
