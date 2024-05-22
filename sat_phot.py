@@ -1,4 +1,4 @@
-#!python3.8
+#!python3
 import datetime
 from datetime import timedelta
 
