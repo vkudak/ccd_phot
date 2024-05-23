@@ -64,16 +64,23 @@ ymd = date_time.split("T")[0]
 ymd = ymd.replace("-", "")
 ##############
 
+header = fits.getheader(path + "//" + fl[0])
+gain = str(header.get('GAIN'))
+exp = str(header.get('EXPTIME')).replace(".", "_")
+
 if conf['star_name'] != "":
-    res_path = os.path.join(path, "result_" + conf['star_name'] + "_" + ymd + "_UT" + ut1 + ".ph" + conf['Filter'])
+    res_path = os.path.join(path, "result_" + conf['star_name'] + "_" + ymd + "_UT" + ut1 + "_g"+gain + "_exp"+exp +".ph" + conf['Filter'])
 else:
-    res_path = os.path.join(path, "result" + "_" + ymd + "_UT" + ut1 + ".ph" + conf['Filter'])
+    res_path = os.path.join(path, "result" + "_" + ymd + "_UT" + ut1 + "_g"+gain + "_exp"+exp + ".ph" + conf['Filter'])
 
 fr = open(res_path, "w")
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")
 
 # from tqdm.auto import tqdm
 n_fit = len(fl)
+
+flux_array, mag_array = [], []
+
 for fit_file in fl:
     perc = fl.index(fit_file)/(n_fit-1) * 100
     print(f"{perc:5.2f}%  filename = {fit_file}", end=" ")
@@ -83,6 +90,7 @@ for fit_file in fl:
     data = fits.getdata(path + "//" + fit_file)
     header = fits.getheader(path + "//" + fit_file)
 
+    gain = header.get('GAIN')
     date_time = header.get('DATE-OBS')
     exp = header.get('EXPTIME')
     exp = float(exp)
@@ -238,6 +246,9 @@ for fit_file in fl:
         # flux = phot_table['residual_aperture_sum'][z]
 
         flux = phot_table['flux'][0]
+
+        flux_array.append(flux)
+
         # print (flux)
         # print(type(flux))
         flux_err = phot_table['flux_error'][0]
@@ -253,6 +264,7 @@ for fit_file in fl:
         if El < 5:
             print("WARNING! Elevation of satellite < 5 deg. Check settings!")
         mag = calc_mag(flux, El, 1000, conf['A'], conf['k'], exp, min_mag=conf['min_real_mag'])
+        mag_array.append(mag)
 
         if (mag <= conf['min_real_mag']) and (conf['time_format'] == "UT"):
             fr.write(f"{date} {time[:12]}   {phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  ")
@@ -270,5 +282,12 @@ for fit_file in fl:
         else:
             print(f"WARNING! mag value < {conf['min_real_mag']} mag, skipping this value!")
 
+fr.write("\n")
+fr.write("              Mean         StDev\n")
+fr.write(f"Flux:      {np.mean(flux_array):8.3f}     {np.std(flux_array):8.3f}\n")
+fr.write(f"Mag:        {np.mean(mag_array):8.3f}     {np.std(mag_array):8.3f}\n")
+
 fr.close()
 print("Photometry is DONE.")
+
+
