@@ -19,6 +19,7 @@ import astropy.coordinates as coord
 from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
 import configparser
+from sgp4.io import fix_checksum
 
 
 def substract(image, dark=None, value=None):
@@ -341,6 +342,9 @@ def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
                 # station.lat = '48.5635505'
                 # station.long = '22.453751'
                 # station.elevation = 231.1325
+                tle[1] = fix_checksum(tle[1])
+                tle[2] = fix_checksum(tle[2])
+
                 sat = ephem.readtle(tle[0], tle[1], tle[2])
                 try:
                     station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
