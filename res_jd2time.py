@@ -51,19 +51,28 @@ def save_ut_data(filename_ut, header,
 
 if __name__ == "__main__":
     filename = sys.argv[1]
-    wd = os.path.dirname(filename)
-    base = os.path.basename(filename)
-    fname, ext = os.path.splitext(base)
 
-    header = read_header(filename)
-    date_time, x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg, fit_file = read_data(filename)
+    if os.path.isfile(filename):
+        filelist = [filename]
+    else:
+        # we got path with mask
+        filelist = glob.glob(filename)
 
-    # print(fname, fname[-2:])
+    
+    for filename in filelist:
+        wd = os.path.dirname(filename)
+        base = os.path.basename(filename)
+        fname, ext = os.path.splitext(base)
 
-    if fname[-2:] == "jd":
-        fname = fname[:-3]
-    # print(fname)
-    f_jd_name = os.path.join(wd, fname + "_ut" + ext)
-    # print(f_jd_name)
+        header = read_header(filename)
+        date_time, x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg, fit_file = read_data(filename)
 
-    save_ut_data(f_jd_name, header, date_time, x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg, fit_file)
+        # print(fname, fname[-2:])
+
+        if fname[-2:] == "jd":
+            fname = fname[:-3]
+        # print(fname)
+        f_jd_name = os.path.join(wd, fname + "_ut" + ext)
+        # print(f_jd_name)
+
+        save_ut_data(f_jd_name, header, date_time, x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg, fit_file)

@@ -1,5 +1,6 @@
 import sys
 import os
+import glob
 import numpy as np
 from datetime import datetime
 
@@ -51,14 +52,23 @@ def save_jd_data(filename_jd, header,
 
 if __name__ == "__main__":
     filename = sys.argv[1]
-    wd = os.path.dirname(filename)
-    base = os.path.basename(filename)
-    fname, ext = os.path.splitext(base)
 
-    header = read_header(filename)
-    date_time, x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg, fit_file = read_data(filename)
+    if os.path.isfile(filename):
+        filelist = [filename]
+    else:
+        # we got path with mask
+        filelist = glob.glob(filename)
 
-    f_jd_name = os.path.join(wd, fname + "_jd" + ext)
-    # print(f_jd_name)
+    
+    for filename in filelist:
+        wd = os.path.dirname(filename)
+        base = os.path.basename(filename)
+        fname, ext = os.path.splitext(base)
 
-    save_jd_data(f_jd_name, header, date_time, x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg, fit_file)
+        header = read_header(filename)
+        date_time, x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg, fit_file = read_data(filename)
+
+        f_jd_name = os.path.join(wd, fname + "_jd" + ext)
+        # print(f_jd_name)
+
+        save_jd_data(f_jd_name, header, date_time, x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg, fit_file)
