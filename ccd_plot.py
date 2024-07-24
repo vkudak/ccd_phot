@@ -1,4 +1,6 @@
-#!python38
+#!/usr/bin/env python3
+#!python3
+
 import sys
 import os
 import numpy as np
