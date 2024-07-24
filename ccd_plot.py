@@ -1,4 +1,4 @@
-#!python3.8
+#!python38
 import sys
 import os
 import numpy as np
@@ -20,6 +20,8 @@ config = configparser.ConfigParser(inline_comment_prefixes="#")
 config.read(os.path.join(wd, 'config_sat.ini'))
 
 time_format = config.get('STD', 'Time_format', fallback="UT")
+plot_errors = False
+
 try:
     filt = config['STD']['Filter']
     filt = filt.strip("\n")
@@ -27,8 +29,26 @@ try:
     filt = filt.strip("\r")
     plot_errors = config.getboolean('PLOT', 'plot_errors', fallback=False)
 except Exception as e:
-    print(e)
-    filt = "None"
+    # print(e)
+    print("No config file found...\nReading data from header")
+
+    # filt = "None"
+
+    header = {}
+    with open(filename) as fres:
+        for line in fres:
+            if line.startswith("#") and "=" in line:
+                hkay, hdata = line[1:].split("=")
+                hkay = hkay.strip()
+                hdata = hdata.strip()
+                hdata = hdata.strip("\n")
+                hdata = hdata.strip("\t")
+                hdata = hdata.strip("\r")
+                header[hkay] = hdata
+    if header["Filter"]:
+        filt = header["Filter"]
+    else:
+        filt = "None"
     pass
 
 
@@ -92,6 +112,10 @@ else:  # JD
 # date, time = np.loadtxt(filename, unpack=True, skiprows=11, usecols=(0, 1), dtype={'names': ('date', 'time'), 'formats': ('S10', 'S12')})
 
 # print (date_time[2])
+bands = ["B", "V", "R", "C", "None"]
+index = bands.index(filt)
+cc = ["blue", "green", "red", "black", "black"]
+f_color = cc[index]
 
 ## fig im MAG
 plt.rcParams['figure.figsize'] = [12, 6]
@@ -100,9 +124,9 @@ dm = dm * 0.1
 plt.axis([min(date_time), max(date_time), max(mR) + dm , min(mR) - dm])
 
 if plot_errors:
-    plt.errorbar(date_time, mR, yerr=m_err, fmt='xr-', linewidth=0.8, fillstyle="none", markersize=3, capsize=3)
+    plt.errorbar(date_time, mR, yerr=m_err, mfc=f_color, fmt='x-', linewidth=0.8, fillstyle="none", markersize=3, capsize=3)
 else:
-    plt.plot(date_time, mR, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
+    plt.plot(date_time, mR, "x-", color=f_color, linewidth=0.5, fillstyle="none", markersize=3)
 
 
 d, t = str(date_time[0]).split(" ")
@@ -164,9 +188,9 @@ dm = dm * 0.1
 plt.axis([min(date_time), max(date_time), min(flux) - dm, max(flux) + dm])
 
 if plot_errors:
-    plt.errorbar(date_time, flux, yerr=f_err, fmt='xr-', linewidth=0.8, fillstyle="none", markersize=3, capsize=3)
+    plt.errorbar(date_time, flux, yerr=f_err, mfc=f_color, fmt='x-', linewidth=0.8, fillstyle="none", markersize=3, capsize=3)
 else:
-    plt.plot(date_time, flux, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
+    plt.plot(date_time, flux, "x-", color=f_color, linewidth=0.5, fillstyle="none", markersize=3)
 
 d, t = str(date_time[0]).split(" ")
 plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%2.3f  Filter=%s" % (name, norad, cospar, d, t, dt, filt), pad=6, fontsize=12)
