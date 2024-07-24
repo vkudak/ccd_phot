@@ -32,11 +32,10 @@ except Exception as e:
     # print(e)
     print("No config file found...\nReading data from header")
 
-    # filt = "None"
-
     header = {}
     with open(filename) as fres:
-        for line in fres:
+        firstNlines = [next(fres) for _ in range(30)]  # read 30 lines
+        for line in firstNlines:
             if line.startswith("#") and "=" in line:
                 hkay, hdata = line[1:].split("=")
                 hkay = hkay.strip()
@@ -59,7 +58,7 @@ def read_name(filename):
     dt = "none"
 
     with open(filename, "r") as myfile:
-        head = [next(myfile) for x in range(20)]
+        head = [next(myfile) for _ in range(20)]
     # print(head)
     # print("---------------------------------"
     for line in head:
