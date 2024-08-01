@@ -114,7 +114,7 @@ for fit_file in fl:
     # print (mean, median, std)
 
     if fit_file == fl[0]:  # make header--------------------------------------------------------------------
-        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(conf['site_lat'], conf['site_lon'], conf['site_elev'],
+        El, Rg, Az, name, nor, cosp, tle_lines, _ = calc_from_tle(conf['site_lat'], conf['site_lon'], conf['site_elev'],
                                                                tle_list,
                                                                date_time,
                                                                conf['cospar'], conf['norad'], conf['name'])
@@ -307,13 +307,13 @@ for fit_file in fl:
         # print(phot_table['residual_aperture_sum'])
         # print (phot_table)
 
-        El, Rg, Az, name, nor, cosp, tle_lines = calc_from_tle(
+        El, Rg, Az, name, nor, cosp, tle_lines, phase = calc_from_tle(
             conf['site_lat'], conf['site_lon'], conf['site_elev'],
             tle_list, date_time,
             conf['cospar'], conf['norad'], conf['name'])
         if El < 5:
             print("WARNING! Elevation of satellite < 5 deg. Check settings!")
-        mag = calc_mag(flux, El, Rg, conf['A'], conf['k'], exp, min_mag=conf['min_real_mag'])
+        mag = calc_mag(flux, El, Rg, conf['A'], conf['k'], exp, min_mag=conf['min_real_mag'], phase=phase)
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
