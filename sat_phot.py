@@ -13,9 +13,16 @@ import sys
 import os
 import warnings
 import subprocess
+import argparse
 # import matplotlib
 # matplotlib.use('Agg')
 
+
+parser = argparse.ArgumentParser(description='Photometry of LEO satellites')
+parser.add_argument('-p', '--path', help='Path to fits files', required=True)
+parser.add_argument('-c', '--config', help='Specify config file', required=False)
+parser.add_argument('-s_file', '--start_file', help='Specify file to start from', required=False)
+args = vars(parser.parse_args())
 
 if len(sys.argv) < 2:
     print("Not enough parameters. Enter path")
@@ -24,14 +31,39 @@ if len(sys.argv) < 2:
 
 warnings.filterwarnings("ignore")
 
-path = sys.argv[1]
-# iniList = glob.glob('*config*.ini')
+# path = sys.argv[1]
+if args["path"]:
+    path = args["path"]
+else:
+    sys.exit("Not enough parameters. Enter path")
 
-conf = read_config_sat(os.path.join(path, 'config_sat.ini'))
+if args["start_file"]:
+    start_file = args["start_file"]
+else:
+    start_file = None
+
+if args["config"]:
+    conf = read_config_sat(args["config"])
+    conf_name = args["config"]
+else:
+    print("Search for configuration in working path")
+    # search for config files in working dir. Config starts from config_sat_XXXXX.ini
+    conf_list = glob.glob(os.path.join(path, 'config_sat*.ini'))
+    if len(conf_list) == 0:
+        print("No configuration found")
+        sys.exit()
+    # conf = read_config_sat(os.path.join(path, 'config_sat.ini'))
+
+    # Load first config in list
+    conf = read_config_sat(conf_list[0])
+    conf_name = conf_list[0]
 
 if not conf:
     print('No config. Exit')
     sys.exit()
+else:
+    # print(f"Using config '{conf_list[0]}'")
+    print(f"Using config '{conf_name}'")
 
 tle_list = get_tle(conf['tle_file'])
 
@@ -55,6 +87,11 @@ if debug:
 # fl = fl[:10]   # first 10 files  ------  file # -1
 # fl = ["Capture_00016.fits"]
 
+# Start photometry from defined FITS file
+if start_file is not None and start_file in fl:
+    st_pos = fl.index(start_file)
+    fl = fl[st_pos:]
+
 # get TIME from first FIT file
 header = fits.getheader(path + "//" + fl[0])
 date_time = header.get('DATE-OBS')
@@ -70,6 +107,7 @@ if conf['norad'] != "":
     res_path = os.path.join(path, "result_" + conf['norad'] + "_" + ymd + "_UT" + ut1 + ".ph" + conf['Filter'])
 else:
     res_path = os.path.join(path, "result" + "_" + ymd + "_UT" + ut1 + ".ph" + conf['Filter'])
+
 
 fr = open(res_path, "w")
 # fr.write("     Date              UT                   X                 Y                Xerr          Yerr                 Flux                filename\n")

@@ -692,7 +692,7 @@ def get_star_el(star_name, obs_lat, obs_lon, obs_elev, obs_date, star_ra_dec=Non
     """
     if star_ra_dec is None:
         star_ra_dec = [0, 0]
-        result = Vizier.query_object(star_name, catalog=['FK5'])[0]
+        result = Vizier.query_object(str(star_name), catalog=['FK5'])[0]
         star_ra_dec[0] = result['RAJ2000'].value.data[0]  # str
         star_ra_dec[0] = star_ra_dec[0].replace(" ", ":")
 

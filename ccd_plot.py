@@ -9,6 +9,7 @@ from datetime import datetime
 import configparser
 
 from astropy.time import Time
+import glob
 
 
 filename = sys.argv[1]
@@ -17,9 +18,23 @@ filename = sys.argv[1]
 wd = os.path.dirname(filename)
 # print(wd)
 
+path, _ = os.path.split(filename)
+print("Search for configuration in working path")
+# search for config files in working dir. Config starts from config_sat_XXXXX.ini
+conf_list = glob.glob(os.path.join(path, 'config_sat*.ini'))
+if len(conf_list) == 0:
+    print("No configuration found")
+    sys.exit()
+else:
+    print(f"Found configuration file {conf_list[0]}")
 
+# Load first config in list
 config = configparser.ConfigParser(inline_comment_prefixes="#")
-config.read(os.path.join(wd, 'config_sat.ini'))
+config.read(os.path.join(wd, conf_list[0]))
+
+# old way
+# config = configparser.ConfigParser(inline_comment_prefixes="#")
+# config.read(os.path.join(wd, 'config_sat.ini'))
 
 time_format = config.get('STD', 'Time_format', fallback="UT")
 plot_errors = False
