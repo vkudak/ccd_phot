@@ -19,7 +19,8 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='Photometry of LEO satellites')
-parser.add_argument('-p', '--path', help='Path to fits files', required=True)
+# parser.add_argument('-p', '--path', help='Path to fits files', required=True)
+parser.add_argument('path', type=str, help='Path to fits files')
 parser.add_argument('-c', '--config', help='Specify config file', required=False)
 parser.add_argument('-s_file', '--start_file', help='Specify file to start from', required=False)
 args = vars(parser.parse_args())
