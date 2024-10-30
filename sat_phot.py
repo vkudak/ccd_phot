@@ -8,6 +8,7 @@ from photutils.aperture import CircularAperture, CircularAnnulus
 # from photutils import aperture_photometry
 from photometry_with_errors import *
 from sp_utils import *
+from obj_finder import obj_finder_dao
 import glob
 import sys
 import os
@@ -148,9 +149,10 @@ for fit_file in fl:
     except Exception:
         pass
 
-    mean, median, std = sigma_clipped_stats(data[20:, :], sigma=3.0)
+    # mean, median, std = sigma_clipped_stats(data[20:, :], sigma=3.0)
     # mean, median, std = sigma_clipped_stats(data, sigma=3.0)
-    # print (mean, median, std)
+    mean, median, std = np.mean(data[5:, :]), np.median(data[5:, :]), np.std(data[5:, :])
+    # print(mean, median, std)
 
     if fit_file == fl[0]:  # make header--------------------------------------------------------------------
         El, Rg, Az, name, nor, cosp, tle_lines, _ = calc_from_tle(conf['site_lat'], conf['site_lon'], conf['site_elev'],
@@ -194,6 +196,16 @@ for fit_file in fl:
             fr.write(f"#      JD                     X          Y         Xerr      Yerr             Flux     Flux_err")
             fr.write(f"     mag{conf['Filter']}  mag_err     Az(deg)   El(deg)   Rg(Km)    filename\n")
 
+        if t_x is None:
+            print("\nNo target info in the HEADER of the first FIT file. Trying to search with DAOFind ...")
+            t_x, t_y = obj_finder_dao(data[5:, :])
+            if t_x and t_y is not None:
+                t_y = t_y + 5
+                print(f"Object detected at X = {t_x:5.2f} Y = {t_y:5.2f}  OK.  ", end="")
+                t_y = height - t_y  # Target_pos coord_system
+            else:
+                print("No target was found on the image")
+                sys.exit()
     ##################################
 
     # BEGIN----
@@ -201,10 +213,9 @@ for fit_file in fl:
         dark_arr = fits.getdata(conf['dark_frame'])
         ph_image = substract(data, dark=dark_arr)
 
-        mean2, median2, std2 = sigma_clipped_stats(ph_image[20:, :], sigma=3.0)
-        # print (mean2, median2, std2)
+        mean2, median2, std2 = np.mean(ph_image[5:, :]), np.median(ph_image[5:, :]), np.std(ph_image[5:, :])
         data = substract(ph_image, value=median2)
-        # data = ph_image
+        # # data = ph_image
     else:
         ph_image = data
         data = substract(data, value=median)
@@ -292,7 +303,8 @@ for fit_file in fl:
         # -------------------------------------------------------------
         # bgr_aperture = CircularAperture(positions, r=an_in)
         phot_table = iraf_style_photometry(aperture, annulus_aperture, ph_image, bg_method='mean')
-        #-----------------------------------------------------------------------
+        # TODO: Check if aperture is not saturated. Warning or rejection needed
+        # -----------------------------------------------------------------------
 
         # for col in phot_table.colnames:
         #     phot_table[col].info.format = '%.8g'  # for consistent table output
