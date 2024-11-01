@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from astropy.stats import sigma_clipped_stats
 from astropy.io import fits
-from photutils.aperture import CircularAperture, CircularAnnulus
+from photutils.aperture import CircularAperture, CircularAnnulus, ApertureStats
 # from photutils import aperture_photometry
 from photometry_with_errors import *
 from sp_utils import *
@@ -283,7 +283,7 @@ for fit_file in fl:
                 x0, y0 = int(target[0]), int(target[1])
             else:
                 x0, y0 = int(target[0]), int(target[1])
-            print(f"final = {x0:d},{y0:d}") #x0, y0)
+            print(f"final = {x0:d},{y0:d}", end="") #x0, y0)
 
         except Exception as E:
             print(E)
@@ -294,6 +294,16 @@ for fit_file in fl:
     if (target) and (target[2] < conf['max_center_error']):  # and (target[-1] > min_signal):
         positions = target[:2]
         aperture = CircularAperture(positions, r=conf['r_ap'])
+        aper_stats = ApertureStats(data, aperture)
+        if aper_stats.max + median == 65535:
+            saturated = "*"
+            if conf["saturated"]:
+                print(f" {saturated}")
+            else:
+                print(" ", end="")
+        else:
+            saturated = ""
+            print(f" {saturated}")
         annulus_aperture = CircularAnnulus(positions, r_in=conf['an_in'], r_out=conf['an_out'])
 
         apers = [aperture, annulus_aperture]
@@ -303,7 +313,6 @@ for fit_file in fl:
         # -------------------------------------------------------------
         # bgr_aperture = CircularAperture(positions, r=an_in)
         phot_table = iraf_style_photometry(aperture, annulus_aperture, ph_image, bg_method='mean')
-        # TODO: Check if aperture is not saturated. Warning or rejection needed
         # -----------------------------------------------------------------------
 
         # for col in phot_table.colnames:
@@ -370,22 +379,24 @@ for fit_file in fl:
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
         # print(mag)
         # print(mag < min_real_mag, mag > min_real_mag)
-
-        if (mag <= conf['min_real_mag']) and (conf['time_format'] == "UT"):
-            fr.write(f"{date} {time[:12]}   {phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  ")
-            fr.write(f"{xerr:8.5f}  {yerr:8.5f}     ")
-            fr.write(f"{'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    ")
-            fr.write(f"{Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
-        elif (mag <= conf['min_real_mag']) and (conf['time_format'] == "JD"):
-            from astropy.time import Time
-            date_time_jd = Time(date_time, format='isot', scale='utc')
-
-            fr.write(f"{date_time_jd.jd:<23}   ")
-            fr.write(f"{phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  {xerr:8.5f}  {yerr:8.5f}     ")
-            fr.write(f"{'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    ")
-            fr.write(f"{Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
+        if conf['saturated'] == False and (saturated=="*"):
+            print(f"WARNING! Aperture is saturated, skipping this value!")
         else:
-            print(f"WARNING! mag value < {conf['min_real_mag']} mag, skipping this value!")
+            if (mag <= conf['min_real_mag']) and (conf['time_format'] == "UT"):
+                fr.write(f"{date} {time[:12]}   {phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  ")
+                fr.write(f"{xerr:8.5f}  {yerr:8.5f}     ")
+                fr.write(f"{'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    ")
+                fr.write(f"{Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}{saturated}\n")
+            elif (mag <= conf['min_real_mag']) and (conf['time_format'] == "JD"):
+                from astropy.time import Time
+                date_time_jd = Time(date_time, format='isot', scale='utc')
+
+                fr.write(f"{date_time_jd.jd:<23}   ")
+                fr.write(f"{phot_table['X'][0]:10.5f} {phot_table['Y'][0]:10.5f}  {xerr:8.5f}  {yerr:8.5f}     ")
+                fr.write(f"{'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    ")
+                fr.write(f"{Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}{saturated}\n")
+            else:
+                print(f"WARNING! mag value < {conf['min_real_mag']} mag, skipping this value!")
         # PLOT GENERAL FIT with apperture
         # import matplotlib.pyplot as plt
         # from matplotlib.patches import Circle

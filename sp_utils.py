@@ -235,7 +235,7 @@ def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=Fals
         bx0, by0 = np.unravel_index(data_fit.argmax(), data_fit.shape)
         if not silent:
             # print("bx, by=", bx0, by0)
-            print(f"bx, by = {bx0:d},{by0:d}")
+            print(f"bx, by = {bx0:d},{by0:d}", end=" ")
 
         sx = by0 - gate
         sy = bx0 - gate
@@ -485,6 +485,7 @@ def read_config_sat(conf_file):
             res['r_ap'] = float(config['APERTURE']['ap'])
             res['an_in'] = float(config['APERTURE']['an_in'])
             res['an_out'] = float(config['APERTURE']['an_out'])
+            res['saturated'] = config.getboolean("APERTURE", "saturated", fallback=True)
 
             res['site_name'] = config['SITE']['Name']
             res['site_lat'] = config['SITE']['lat']
