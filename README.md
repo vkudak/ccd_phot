@@ -1,3 +1,7 @@
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/vkudak/ccd_phot)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-closed/vkudak/ccd_phot)
+![GitHub Release](https://img.shields.io/github/release/vkudak/ccd_phot)
+
 Photometry of artificial satellites with CCD QHY-174M
 ===================
 ## ccd_stat_phot
