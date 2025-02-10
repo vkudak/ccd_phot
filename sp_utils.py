@@ -235,7 +235,7 @@ def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=Fals
         bx0, by0 = np.unravel_index(data_fit.argmax(), data_fit.shape)
         if not silent:
             # print("bx, by=", bx0, by0)
-            print(f"bx, by = {bx0:d},{by0:d}")
+            print(f"bx, by = {bx0:d},{by0:d}", end=" ")
 
         sx = by0 - gate
         sy = bx0 - gate
@@ -356,7 +356,13 @@ def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
                 rg = sat.range / 1000.0  # km
                 az = math.degrees(sat.az)
                 n = n.lstrip("0 ")
-                return el, rg, az, n, no, c, tle
+
+                sun = ephem.Sun()
+                sun.compute(station)
+                my_phase = calc_phase(sun, sat)
+                my_phase = math.degrees(my_phase)  # check ?
+
+                return el, rg, az, n, no, c, tle, my_phase
             else:
                 print('\nCan not find TLE for such satellite !!!')
                 sys.exit()
@@ -479,6 +485,7 @@ def read_config_sat(conf_file):
             res['r_ap'] = float(config['APERTURE']['ap'])
             res['an_in'] = float(config['APERTURE']['an_in'])
             res['an_out'] = float(config['APERTURE']['an_out'])
+            res['saturated'] = config.getboolean("APERTURE", "saturated", fallback=True)
 
             res['site_name'] = config['SITE']['Name']
             res['site_lat'] = config['SITE']['lat']
@@ -597,7 +604,7 @@ def sort_file_list(path, fl, field='DATE-OBS'):
     return sort_list
 
 
-def calc_mag(flux, el, rg, zp, k, exp, min_mag=15):
+def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, phase=None):
     """
     Parameters
     ----------
@@ -615,16 +622,41 @@ def calc_mag(flux, el, rg, zp, k, exp, min_mag=15):
 
     """
     if flux < 0:
-        m = min_mag
-        return m
+        return min_mag
     else:
         m_inst = -2.5 * math.log10(flux / exp)
         mz = 1 / (math.cos(math.pi / 2 - math.radians(el)))  # 1/cos(90-el)
         mr = -5 * math.log10(rg / 1000.0)
         mzr = k * mz
 
-        m = zp + m_inst + mzr + mr
+        m = zp + m_inst - mzr + mr
+
+        # with open("tmp_mag.txt", "a+") as f:
+        #     phase = math.degrees(phase)
+        #     f.write(f"{m:5.3f}    {zp:5.3f}   {m_inst:5.3f}   {mzr:5.3f}  {mr:5.3f}  {el:5.3f}   {rg:5.3f}  {phase:5.3f}\n")
     return m
+
+
+def calc_phase(sun, sat):
+    # Calculate distance from observer to the sun, and to the satellite (length a and b of our triangle).
+    sun_distance = (sun.earth_distance * ephem.meters_per_au) - ephem.earth_radius
+    satellite_distance = sat.range
+
+    # Calculate angle separating sun and satellite (angle C of our triangle)
+    separation_angle = ephem.separation(sat, sun)
+
+    # Calculate distance between sun and satellite (length c of our triangle)
+    # c = sqrt(a*a + b*b - 2 * a * b * cos(C))
+    sun_satellite_distance = math.sqrt((sun_distance * sun_distance) + (satellite_distance * satellite_distance) -
+                                       (2 * sun_distance * satellite_distance * math.cos(separation_angle)))
+
+    # Now we know the length of all sides of the triangle, calculate the phase angle (angle A of our triangle)
+    # A = acos((b*b + c*c - a*a) / (2 * b * c))
+    phase_angle = math.acos(((satellite_distance * satellite_distance) +
+                             (sun_satellite_distance * sun_satellite_distance) - (sun_distance * sun_distance)) / (
+                                        2 * satellite_distance * sun_satellite_distance))
+
+    return phase_angle
 
 
 def fix_datetime(date_time):
@@ -661,7 +693,7 @@ def get_star_el(star_name, obs_lat, obs_lon, obs_elev, obs_date, star_ra_dec=Non
     """
     if star_ra_dec is None:
         star_ra_dec = [0, 0]
-        result = Vizier.query_object(star_name, catalog=['FK5'])[0]
+        result = Vizier.query_object(str(star_name), catalog=['FK5'])[0]
         star_ra_dec[0] = result['RAJ2000'].value.data[0]  # str
         star_ra_dec[0] = star_ra_dec[0].replace(" ", ":")
 

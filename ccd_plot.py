@@ -1,4 +1,6 @@
-#!python38
+#!/usr/bin/env python3
+#!python3
+
 import sys
 import os
 import numpy as np
@@ -7,6 +9,7 @@ from datetime import datetime
 import configparser
 
 from astropy.time import Time
+import glob
 
 
 filename = sys.argv[1]
@@ -15,9 +18,23 @@ filename = sys.argv[1]
 wd = os.path.dirname(filename)
 # print(wd)
 
+path, _ = os.path.split(filename)
+print("Search for configuration in working path")
+# search for config files in working dir. Config starts from config_sat_XXXXX.ini
+conf_list = glob.glob(os.path.join(path, 'config_sat*.ini'))
+if len(conf_list) == 0:
+    print("No configuration found")
+    sys.exit()
+else:
+    print(f"Found configuration file {conf_list[0]}")
 
+# Load first config in list
 config = configparser.ConfigParser(inline_comment_prefixes="#")
-config.read(os.path.join(wd, 'config_sat.ini'))
+config.read(os.path.join(wd, conf_list[0]))
+
+# old way
+# config = configparser.ConfigParser(inline_comment_prefixes="#")
+# config.read(os.path.join(wd, 'config_sat.ini'))
 
 time_format = config.get('STD', 'Time_format', fallback="UT")
 plot_errors = False
@@ -32,11 +49,10 @@ except Exception as e:
     # print(e)
     print("No config file found...\nReading data from header")
 
-    # filt = "None"
-
     header = {}
     with open(filename) as fres:
-        for line in fres:
+        firstNlines = [next(fres) for _ in range(30)]  # read 30 lines
+        for line in firstNlines:
             if line.startswith("#") and "=" in line:
                 hkay, hdata = line[1:].split("=")
                 hkay = hkay.strip()
@@ -45,15 +61,10 @@ except Exception as e:
                 hdata = hdata.strip("\t")
                 hdata = hdata.strip("\r")
                 header[hkay] = hdata
-    if "Filter" in header:
+    if header["Filter"]:
         filt = header["Filter"]
     else:
         filt = "None"
-
-    if "Time_format" in header:
-        time_format = header["Time_format"]
-    else:
-        time_format = "UT"
     pass
 
 
@@ -64,7 +75,7 @@ def read_name(filename):
     dt = "none"
 
     with open(filename, "r") as myfile:
-        head = [next(myfile) for x in range(20)]
+        head = [next(myfile) for _ in range(20)]
     # print(head)
     # print("---------------------------------"
     for line in head:
@@ -95,8 +106,6 @@ if time_format == "UT":
 
     for i in range(0, len(date)):
         # date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
-        print(date[i])
-        print(time[i])
         date_time.append(datetime.strptime(date[i] + ' ' + time[i] + "000", "%Y-%m-%d %H:%M:%S.%f"))
 else:  # JD
     flux, f_err, mR, m_err, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(5, 6, 7, 8, 9, 10), unpack=True)

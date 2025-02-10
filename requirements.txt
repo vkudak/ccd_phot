@@ -1,10 +1,10 @@
-astropy
+astropy~=5.3
 astroquery~=0.4.1
-photutils~=1.8
-numpy>=1.22
-matplotlib~=3.3
+photutils~=2.0.2
+numpy~=1.24
+matplotlib>=3.7.5
 ephem~=3.7.7.1
-scipy
+scipy~=1.11.3
 tqdm~=4.52.0
 scikit-learn~=1.1
 sgp4
