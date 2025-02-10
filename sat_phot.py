@@ -138,6 +138,7 @@ for fit_file in fl:
         exp_header = fits.getheader(path + "//" + fl[int(len(fl)/2)])
         fr.write("# dt = %s\n" % exp_header.get('EXPTIME'))
         fr.write("# Filter = %s\n" % conf['Filter'])
+        fr.write("# Time_format = %s\n" % conf['time_format'])
 
         fr.write("# COSPAR = %s\n" % cosp)
         fr.write("# NORAD  = %s\n" % nor)

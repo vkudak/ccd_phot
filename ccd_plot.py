@@ -45,10 +45,15 @@ except Exception as e:
                 hdata = hdata.strip("\t")
                 hdata = hdata.strip("\r")
                 header[hkay] = hdata
-    if header["Filter"]:
+    if "Filter" in header:
         filt = header["Filter"]
     else:
         filt = "None"
+
+    if "Time_format" in header:
+        time_format = header["Time_format"]
+    else:
+        time_format = "UT"
     pass
 
 
@@ -90,6 +95,8 @@ if time_format == "UT":
 
     for i in range(0, len(date)):
         # date_time.append(datetime.strptime(date[i].decode('UTF-8') + ' ' + time[i].decode('UTF-8') + "000", "%Y-%m-%d %H:%M:%S.%f"))
+        print(date[i])
+        print(time[i])
         date_time.append(datetime.strptime(date[i] + ' ' + time[i] + "000", "%Y-%m-%d %H:%M:%S.%f"))
 else:  # JD
     flux, f_err, mR, m_err, Az, El = np.genfromtxt(filename, skip_header=True, usecols=(5, 6, 7, 8, 9, 10), unpack=True)
