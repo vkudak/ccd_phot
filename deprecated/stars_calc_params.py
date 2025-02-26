@@ -3,8 +3,9 @@ from astropy.stats import sigma_clipped_stats
 from astropy.io import fits
 import numpy as np
 from numpy.ma import masked
-from photutils import CircularAperture, CircularAnnulus
-from photutils import aperture_photometry
+# from photutils import CircularAperture, CircularAnnulus
+# from photutils import aperture_photometry
+from photutils.aperture import CircularAperture, CircularAnnulus, ApertureStats, aperture_photometry
 from sp_utils import *
 import math
 # import glob

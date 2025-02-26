@@ -22,6 +22,67 @@ import configparser
 from sgp4.io import fix_checksum
 
 
+
+def convert_ndarray(obj):
+    """ Рекурсивно проходить по структурі та конвертує numpy-об'єкти у стандартні типи """
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()  # Конвертуємо масив у список
+    elif isinstance(obj, (np.float32, np.float64)):
+        return float(obj)  # Конвертуємо float32/float64 у стандартний float
+    elif isinstance(obj, (np.int32, np.int64)):
+        return int(obj)  # Конвертуємо int32/int64 у стандартний int
+    elif isinstance(obj, list):
+        return [convert_ndarray(item) for item in obj]  # Обробляємо список рекурсивно
+    elif isinstance(obj, dict):
+        return {key: convert_ndarray(value) for key, value in obj.items()}  # Обробляємо словник рекурсивно
+    else:
+        return obj  # Інші типи залишаємо без змін
+
+
+def convert_to_numpy(obj):
+    """ Рекурсивно перетворює списки назад у numpy-масиви """
+    if isinstance(obj, list):
+        return np.array(obj) if all(isinstance(i, (int, float)) for i in obj) else [convert_to_numpy(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {key: convert_to_numpy(value) for key, value in obj.items()}
+    else:
+        return obj  # Повертаємо без змін, якщо це не список або словник
+
+
+def RMS_del(A, value, B=None, log_file=None):
+    '''Delete elements of array A until A.RMS>value'''
+    A = np.array(A)
+    if B is not None:
+        B = np.array(B)
+    A_del = []
+    while A.std(axis=0) > value:
+        # rms = A.std(axis=0)
+        mean = A.mean(axis=0)
+        d = []  # X-mean
+        maxx = 0
+        for i in range(len(A)):
+            d.append(abs(A[i] - mean))
+            if d[i] > maxx:
+                maxx = d[i]
+                imax = i
+        A_del.append(A[imax])
+        A = np.delete(A, imax)
+        if B is not None:
+            B = np.delete(B, imax)
+
+    strFormat = len(A_del) * '{:5.3f}, '
+    formattedList = strFormat.format(*A_del)
+
+    print("N deleted =", len(A_del))
+    if log_file:
+        log_file.write("N deleted = %i \n" % len(A_del))
+        log_file.write("Deleted value(s): " + formattedList + "\n")
+    if B is not None:
+        return A, B
+    else:
+        return A
+
+
 def substract(image, dark=None, value=None):
     image = np.array(image, dtype=float)
 
@@ -92,7 +153,8 @@ def lsqFit(y, x):
     A = np.vstack([x, np.ones(len(x))]).T
     res = []
     # linearly generated sequence
-    if y != []:
+    # print('Y=', y)
+    if len(y) > 0:
         wb = np.linalg.lstsq(A, y, rcond=None)  # obtaining the parameters
         a, c = wb[0]
         residual_sum = wb[1]
@@ -130,6 +192,17 @@ def get_from_LAND(RA, DEC, w="0d60m", h="30m", radius=None, Filter={'Rmag': '<13
         table = Vizier.query_region(center, width=w, radius=radius, catalog=["Landolt"], column_filters=Filter)
     else:
         table = Vizier.query_region(center, width=w, height=h, catalog=["Landolt"], column_filters=Filter)
+    return table
+
+
+def get_from_Gaia_EDR3_std(RA, DEC, w="0d60m", h="30m", radius=None, Filter={'Rmag': '<13'}):
+    cat_name = 'J/A+A/664/A109'
+    center = coord.SkyCoord(ra=RA, dec=DEC, unit=(u.deg, u.deg), frame='icrs')
+    Vizier.ROW_LIMIT = 5000
+    if radius:
+        table = Vizier.query_region(center, width=w, radius=radius, catalog=[cat_name], column_filters=Filter)
+    else:
+        table = Vizier.query_region(center, width=w, height=h, catalog=[cat_name], column_filters=Filter)
     return table
 
 

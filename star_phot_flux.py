@@ -16,6 +16,9 @@ import subprocess
 # import matplotlib
 # matplotlib.use('Agg')
 
+'''
+Script to get flux for star objects
+'''
 
 if len(sys.argv) < 2:
     print("Not enough parameters. Enter path")
