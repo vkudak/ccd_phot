@@ -36,6 +36,8 @@ Rinst = Rstd + ZR + Kr′X + Cr(V − R)std
 Iinst = Istd + ZI + Ki'X + Ci(V − I)std
 
 Papers to help:
+https://www.astro.ncu.edu.tw/~wchen/wp_chen/essay/Kinoshita2005ChJAA5-315%20LOTPI1300B.pdf
+
 https://arxiv.org/pdf/1205.6529.pdf
 https://arxiv.org/pdf/1401.4281.pdf
 https://adsabs.harvard.edu/pdf/1983PASP...95.1021S
@@ -130,18 +132,23 @@ for i in range(len(database)):
             (database[i]["Vmag"] < max_m) and \
             (abs(database[i]["V-R"]) < 1.95) and \
             (len(database[i]["Flux"]) > 5):
-        m_inst = -2.5 * math.log10(database[i]["Flux_mean"]/database[i]["exp"].mean(axis=0))
+        m_inst = -2.5 * math.log10(database[i]["Flux_mean"])
 
         # TODO: make two systems to solve with linReg. One for A and C, another for A and K coefficients
 
         if conf['c_flag']:
             # yq = database[i]["Rmag"] + m_inst - kr * database[i]["Mz"]
-            yq = database[i]["Rmag"] - m_inst - conf['kr'] * database[i]["Mz"]
+            # yq = database[i]["Vmag"] - m_inst - conf['kr'] * database[i]["Mz"]
+            yq = m_inst - database[i]["Vmag"] - conf['kv'] * database[i]["Mz"]
+            # yq = database[i]["Vmag"] - m_inst + conf['kv'] * database[i]["Mz"]
+
+            # print(database[i]["Vmag"], m_inst, conf['kv'], database[i]["Mz"])
+
             # if (yq < 17) and (yq > 14) and (database[i]["f/b"].mean(axis=0) > snr_value):
             if database[i]["f/b"].mean(axis=0) > conf['snr_value']:
                 database[i]["yq"] = yq
                 y_ar.append(database[i]["yq"])
-                x_ar.append(database[i]["V-R"])
+                x_ar.append(database[i]["B-V"])
                 fi = np.array(2.5 * np.log10(database[i]["Flux"]))
                 yerr_ar.append(fi.std(axis=0))  # std from  2.5 * log10(Flux)
                 l_ar.append(database[i]["Name"])
@@ -154,14 +161,14 @@ for i in range(len(database)):
                 database[i]["Good"] = "low s/n"
 
         else:
-            database[i]["A"] = (database[i]["Rmag"] -
+            database[i]["A"] = (database[i]["Vmag"] -
                                 m_inst -
-                                conf['kr'] * database[i]["Mz"] -
-                                conf['Cr'] * database[i]["V-R"]
+                                conf['kv'] * database[i]["Mz"] -
+                                conf['Cv'] * database[i]["V-R"]
                                 )
             if database[i]["f/b"].mean(axis=0) > conf['snr_value']:
                 A_m_list.append(database[i]["A"])
-                A_mR_list.append(database[i]["Rmag"])
+                A_mR_list.append(database[i]["Vmag"])
                 database[i]["Good"] = True
         # # save to Fedorovich
         # Mz = database[i]["Mz"]
@@ -188,6 +195,7 @@ if conf['c_flag']:
 
     r_max = 999
     # r_max_val = 0.75
+    # print(conf['r_max_val'])
     while (r_max > conf['r_max_val']) and (len(y_ar) > 5):
         # if len(y_ar) > 5:
         c, a, r_max, ind, r2 = lsqFit(y_ar, x_ar)
@@ -222,8 +230,8 @@ if conf['c_flag']:
         # print(p1)
         # print(p2)
         plt.plot(p1, p2, "k")
-        plt.xlabel("V-R")
-        plt.ylabel(r'$m_{st}-m_{inst}-K_{r} \cdot M_{z}$')
+        plt.xlabel("B-V")
+        plt.ylabel(r'$V_{inst}-V_{st}-K_{v} \cdot M_{z}$')
         # plt.title(fit_file)
         # plt.show()
         plt.savefig(os.path.join(path, "graph_Cr.png"))
@@ -253,18 +261,18 @@ if conf['c_flag']:
 
     # ### Write stars data
     log_file.write("######################--STARS  DATA--###################################\n")
-    log_file.write("Name          Vmag   Rmag    V-R      Flux_mean      Flux_std   n_count  (f/b)_maen    Mz     Note\n")
+    log_file.write("Name                  Bmag   Vmag    B-V      Flux_mean      Flux_std   n_count  (f/b)_maen    Mz      Note\n")
     database = sorted(database, key=lambda tstar: tstar["Good"])
     for star in database:
         # log_file.write("%17s  %5.3f  %5.3f  % 2.3f     %8.3f   %5.3f    %i         %2.3f     %2.3f    %s\n" %
         #                (star["Name"], star["Vmag"], star["Rmag"], star["V-R"], star["Flux_mean"], star["Flux_std"],
         #                 len(star["Flux"]), star["f/b"].mean(axis=0), star["Mz"], star["Good"]))
 
-        log_file.write("{:17s}  {:{width}.{prec}f}  {:{width}.{prec}f}   {:{width}.{prec}f}  {:{width2}.{prec2}f}  {:{width2}.{prec2}f}  {:{width}d}       {:{width}.{prec}f}     {:{width}.{prec}f}    {:7s}\n".format(
-                       star["Name"],
+        log_file.write("{:20s}  {:{width}.{prec}f}  {:{width}.{prec}f}   {:{width}.{prec}f}  {:{width2}.{prec2}f}  {:{width2}.{prec2}f}  {:{width}d}       {:{width}.{prec}f}     {:{width}.{prec}f}    {:7s}\n".format(
+                       star["Name"].strip(),
+                       star["Bmag"],
                        star["Vmag"],
-                       star["Rmag"],
-                       star["V-R"],
+                       star["B-V"],
                        star["Flux_mean"],
                        star["Flux_std"],
                        len(star["Flux"]),

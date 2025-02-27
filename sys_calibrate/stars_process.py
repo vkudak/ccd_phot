@@ -5,6 +5,7 @@ from astropy.stats import sigma_clipped_stats
 from astropy.io import fits
 from astropy import units as u
 import numpy as np
+from ephem import degree
 from numpy.ma import masked
 from photutils.aperture import CircularAperture, CircularAnnulus
 
@@ -62,45 +63,6 @@ if ploting:
     # from astropy.visualization import LogStretch
     # from astropy.visualization.mpl_normalize import ImageNormalize
 
-# config = configparser.ConfigParser(inline_comment_prefixes="#")
-# config.read(os.path.join(path,'config_stars.ini'))
-# if os.path.isfile(os.path.join(path, 'config_stars.ini')):
-#     try:
-#         kr = config.getfloat('Stars_Stand', 'K')
-#         max_m = config.get('Stars_Stand', 'max_m_fit', fallback="14")
-#         rms_val = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
-#         c_flag = config.getboolean('Stars_Stand', 'calc_C', fallback=True)
-#         snr_value = config.getfloat('Stars_Stand', 'snr', fallback=1.2)
-#         if not c_flag:
-#             Cr = config.getfloat('Stars_Stand', 'C')
-#
-#         dark_frame = config.get('Stars_Stand', 'dark_frame', fallback=False)
-#         dark_stable = config.getfloat('Stars_Stand', 'dark_stable', fallback=0.0)
-#
-#         r_ap = config.getfloat('APERTURE', 'r_ap')
-#         an_in = config.getfloat('APERTURE', 'an_in')
-#         an_out = config.getfloat('APERTURE', 'an_out')
-#
-#         scale_min = config.getfloat('astrometry.net', 'scale_lower', fallback=1)
-#         scale_max = config.getfloat('astrometry.net', 'scale_upper', fallback=20)
-#         api_key = config.get('astrometry.net', 'api_key', fallback="No key")
-#
-#         if scale_max == 20 and scale_min == 1:
-#             print("No 'astrometry.net' section in INI file. Using default astrometry.net params")
-#             log_file.write("No 'astrometry.net' section in INI file. Using default astrometry.net params\n")
-#
-#         site_name = config.get('SITE', 'Name', fallback="No name")
-#         site_lat = config.get('SITE', "lat")
-#         site_lon = config.get('SITE', 'lon')
-#         site_elev = config.getfloat('SITE', 'h')
-#
-#     except Exception as E:
-#         print("Error in INI file\n", E)
-#         sys.exit()
-# else:
-#     print(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')}")
-#     log_file.write(f"Error. Cant find config_stars.ini in {os.path.join(path, 'config_stars.ini')} \n")
-#     sys.exit()
 
 conf = read_config_stars(os.path.join(path, 'config_stars.ini'), log_file)
 if not conf:
@@ -256,6 +218,7 @@ for fit_file in fl:
         print("creating column Rmag")
         table_res["Rmag"] = table_res["Vmag"] - table_res["V-R"]
     table_res['V-R'] = table_res["Vmag"] - table_res["Rmag"]
+    table_res['B-V'] = table_res["Bmag"] - table_res["Vmag"]
 
     # print(table_res.colnames)
     # sys.exit()
@@ -344,12 +307,14 @@ for fit_file in fl:
                     # row['Name'] = row["Name"].rstrip()
 
                     star = ephem.FixedBody()
-                    star._ra = ephem.hours(str(ra_s))
+                    star._ra = ephem.degrees(str(ra_s))
                     star._dec = ephem.degrees(str(dec_s))
+                    # print(star._ra, star._dec)
                     station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
                     star.compute(station)
                     el = star.alt  # in radians !!!!!!!!
                     Mz = 1 / (math.cos(math.pi / 2 - el))
+                    # print(el,ephem.degrees(el)*ephem.degree, Mz)
 
                     if (flux > 0) and (vmr is not masked) and (abs(row["V-R"]) < 2):
                         if conf['c_flag']:
@@ -405,30 +370,34 @@ for fit_file in fl:
                             a_xx = np.array(database[save_ind]["X"])
                             a_yy = np.array(database[save_ind]["Y"])
                             # a_A = np.array(database[save_ind]["A"])
-                            a_exp = np.array(database[save_ind]["exp"])
+                            # a_exp = np.array(database[save_ind]["exp"])
+                            database[save_ind]["Bmag"] = row["Bmag"]
                             database[save_ind]["Vmag"] = row["Vmag"]
                             database[save_ind]["Rmag"] = row["Rmag"]
                             database[save_ind]["V-R"] = vmr
-                            database[save_ind]["Flux"] = np.append(a_flux, flux)
+                            database[save_ind]["B-V"] = row["B-V"]
+                            database[save_ind]["Flux"] = np.append(a_flux, flux/exp)
                             database[save_ind]["f/b"] = np.append(a_snr, snr)
                             database[save_ind]["Mz"] = Mz
                             database[save_ind]["X"] = np.append(a_xx, xx)
                             database[save_ind]["Y"] = np.append(a_yy, yy)
-                            database[save_ind]["exp"] = np.append(a_exp, exp)
+                            # database[save_ind]["exp"] = np.append(a_exp, exp)
                             # if not c_flag:
                             #     database[save_ind]["A"] = np.append(a_A, A)
                         else:
                             star_e = {
                                 "Name": row["Name"],
+                                "Bmag": row["Bmag"],
                                 "Vmag": row["Vmag"],
                                 "Rmag": row["Rmag"],
                                 "V-R": vmr,
-                                "Flux": np.array([flux]),
+                                "B-V": row["B-V"],
+                                "Flux": np.array([flux/exp]),
                                 "f/b": np.array([snr]),
                                 "Mz": Mz,
                                 "X": np.array([xx]),
                                 "Y": np.array([yy]),
-                                "exp": np.array([exp])
+                                # "exp": np.array([exp])
                                 # "A": np.array([])
                             }
                             # if not c_flag:
@@ -436,7 +405,7 @@ for fit_file in fl:
                             database.append(star_e)
                 except Exception as e:
                     # except Exception as e:
-                    print(str(e))
+                    print(repr(e))
                     print(row["Name"], "Fail fit Gauss...")
                     log_file.write('%17s fail in Gauss fit\n' % row["Name"])
                     pass

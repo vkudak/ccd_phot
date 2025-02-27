@@ -160,8 +160,9 @@ def lsqFit(y, x):
         residual_sum = wb[1]
         r2 = 1 - residual_sum / (y.size * y.var())  # = R^2
         # residual = wb[1][0]
-    # else:
-    #    residual = 999
+    else:
+        r2 = 0 #residual = 999
+
     for i in range(0, len(x)):
         res.append(abs(y[i] - (a * x[i] + c)))
     res = np.array(res)
@@ -172,7 +173,7 @@ def lsqFit(y, x):
     else:
         ind = np.argmin(res)
         res_max = abs(res_min)
-    return a, c, res_max, ind, r2
+    return a, c, res_max, ind, r2[0]
 
 
 def get_from_NOMAD(RA, DEC, w="0d60m", h="30m", radius=None, Filter={'Rmag': '<13'}):
@@ -477,7 +478,8 @@ def read_config_stars(conf_file, log_file):
     if os.path.isfile(conf_file):
         try:
             config.read(conf_file)
-            res['kr'] = config.getfloat('Stars_Stand', 'K')
+            res['kv'] = config.getfloat('Stars_Stand', 'Kv')
+            res['kb'] = config.getfloat('Stars_Stand', 'Kb')
             res['max_m'] = config.get('Stars_Stand', 'max_m_fit', fallback="14")
             res['rms_val'] = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
             res['r_max_val'] = config.getfloat('Stars_Stand', 'r_max_val', fallback=6.25)
