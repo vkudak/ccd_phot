@@ -192,7 +192,7 @@ for fit_file in fl:
     print("Grab stars from Vizier (Vmag<%s)...." % conf['max_m_fit'])
     log_file.write("Grab stars from Vizier (Vmag<%s)....\n" % conf['max_m_fit'])
 
-    table_res = get_from_Gaia_EDR3_std(ra_c, dec_c, radius="1.5 deg", Filter={'Vmag': '<' + str(conf['max_m_fit'])})
+    table_res = get_from_Gaia_EDR3_std(ra_c, dec_c, radius=f"{conf['fov']} deg", Filter={'Vmag': '<' + str(conf['max_m_fit'])})
 
     table_res = table_res['J/A+A/664/A109/table5'] # Landolt & Stetson    collection
     # table_res = table_res['J/A+A/664/A109/table1']  # Landolt only

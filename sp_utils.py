@@ -599,6 +599,7 @@ def read_config_stars(conf_file, log_file):
 
             res['dark_frame'] = config.get('Stars_Stand', 'dark_frame', fallback=False)
             res['dark_stable'] = config.getfloat('Stars_Stand', 'dark_stable', fallback=0.0)
+            res['fov'] = config.getfloat('Stars_Stand', 'FoV', fallback=1.5)
 
             res['r_ap'] = config.getfloat('APERTURE', 'r_ap')
             res['an_in'] = config.getfloat('APERTURE', 'an_in')
