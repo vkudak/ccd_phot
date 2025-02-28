@@ -141,10 +141,14 @@ def solve_photometric_coefficients(m_inst, m_std, x, color_ind, star_names, band
 
     # Побудова графіка, якщо потрібно
     if plot:
+        c = {"B": 'blue', "V": 'green', "R": 'red'}
+        my_color = c[f'{band}']
         if path is None:
             path = os.getcwd()
+
+        # Graph 1: Photometric Calibration
         plt.figure(figsize=(12, 8))
-        plt.scatter(x, m_std - m_inst, label='Data', color='blue')
+        plt.scatter(x, m_std - m_inst, label='Data', color=my_color)
         for i, name in enumerate(star_names):
             plt.annotate(name, (x[i], m_std[i] - m_inst[i]), fontsize=8, alpha=0.7)
         x_range = np.linspace(min(x), max(x), 100)
@@ -154,8 +158,35 @@ def solve_photometric_coefficients(m_inst, m_std, x, color_ind, star_names, band
         plt.ylabel('Magnitude Difference')
         plt.title(f'Photometric Calibration in {band} Filter')
         # plt.legend()
-        # plt.show()
+        plt.tight_layout()
         plt.savefig(os.path.join(path, f"graph_{band}.png"))
+        plt.close()
+
+        # Graph 2: Residual Analysis
+        plt.figure(figsize=(12, 8))
+        residuals = b - predicted
+        plt.scatter(predicted, residuals, color=my_color, alpha=0.6)
+        plt.axhline(0, color='black', linestyle='--')
+        for i, name in enumerate(star_names):
+            plt.annotate(name, (predicted[i], residuals[i]), fontsize=8, alpha=0.7)
+        plt.xlabel('Fitted Values')
+        plt.ylabel('Residuals')
+        plt.title('Residual Analysis')
+        plt.tight_layout()
+        plt.savefig(os.path.join(path, f"residuals_{band}.png"))
+        plt.close()
+
+        # Graph 3: Calibrated vs. Catalog Magnitudes
+        plt.figure(figsize=(12, 8))
+        calibrated_magnitudes = m_inst + coeffs[0] + (coeffs[1] * x if k is None else k * x) + coeffs[2] * color_ind
+        plt.scatter(m_std, calibrated_magnitudes, color=my_color, alpha=0.6)
+        plt.plot(m_std, m_std, color='black', linestyle='--', label='Ideal Fit')
+        plt.xlabel('Catalog Magnitude')
+        plt.ylabel('Calibrated Magnitude')
+        plt.title('Calibrated vs. Catalog Magnitudes')
+        plt.tight_layout()
+        plt.savefig(os.path.join(path, f"calibrated_mags_{band}.png"))
+        plt.close()
 
     return *coeffs, *errors, removed_stars, r_squared
 
