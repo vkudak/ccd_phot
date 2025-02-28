@@ -49,6 +49,117 @@ def convert_to_numpy(obj):
         return obj  # Повертаємо без змін, якщо це не список або словник
 
 
+def solve_photometric_coefficients(m_inst, m_std, x, color_ind, star_names, band,
+                                   threshold=0.25,
+                                   log_file=None,
+                                   k=None,
+                                   plot=False,
+                                   path=None):
+    """
+    Calculates the coefficients Z, K, C in some filter,
+    using the least squares method with point rejection.
+
+    Parameters:
+    m_inst (array): Instrumental Magnitudes.
+    m_std (array): Standard Magnitudes (Landolt catalogue or other).
+    x (array): Air mass of Star.
+    color_ind (array): Color index of Star (B-V or other).
+    star_names (array): Star names.
+    band(str): Band (Filter).
+    threshold (float): Threshold for rejection of stars (Default = 0.25).
+    log_file (file obj): Log file to write to OR None.
+    k (float or None): If None, k is determined, otherwise it is constant.
+    plot (bool): If True, plot the Graph.
+    path (string): Path to save the figure.
+
+    Returns:
+    tuple: (Z, K, C, sigma_Z, sigma_K, sigma_C, removed_stars)
+    """
+    m_inst = np.array(m_inst)
+    m_std = np.array(m_std)
+    x = np.array(x)
+    color_ind = np.array(color_ind)
+    star_names = np.array(star_names)
+
+    removed_stars = []
+    while True:
+        # Формуємо матрицю коефіцієнтів A
+        if k is None:
+            a = np.column_stack((np.ones_like(m_inst), x, color_ind))
+        else:
+            a = np.column_stack((np.ones_like(m_inst), color_ind))
+
+        # Вектор спостережень b
+        if k is None:
+            b = m_std - m_inst
+        else:
+
+            b = m_std - m_inst - k * x
+
+        # Метод найменших квадратів
+        coeffs, residuals, _, _ = np.linalg.lstsq(a, b, rcond=None)
+
+        if k is not None:
+            coeffs = np.insert(coeffs, 1, k)
+
+        # Обчислюємо відхилення
+        predicted = a @ coeffs[[0, 2]] if k is not None else a @ coeffs
+        errors = np.abs(predicted - b)
+
+        # Перевіряємо, чи є точки з великим відхиленням
+        max_error_idx = np.argmax(errors)
+        max_error_value = errors[max_error_idx]
+        if max_error_value < threshold:
+            break  # Якщо всі відхилення менші за поріг, виходимо з циклу
+
+        # Зберігаємо інформацію про видалену зірку
+        removed_stars.append((star_names[max_error_idx], max_error_value))
+        print(f"Star: '{star_names[max_error_idx]}' was removed with error value = {max_error_value:4.3f}")
+        if log_file is not None:
+            log_file.write(
+                f"Star: '{star_names[max_error_idx]}' was removed with error value = {max_error_value:4.3f}\n")
+
+        # Видаляємо точку з найбільшим відхиленням
+        m_inst = np.delete(m_inst, max_error_idx)
+        m_std = np.delete(m_std, max_error_idx)
+        x = np.delete(x, max_error_idx)
+        color_ind = np.delete(color_ind, max_error_idx)
+        star_names = np.delete(star_names, max_error_idx)
+
+    # Оцінка похибок коефіцієнтів
+    residual_variance = residuals / (len(b) - len(coeffs)) if len(residuals) > 0 else np.array([0])
+    cov_matrix = np.linalg.inv(a.T @ a) * residual_variance
+    errors = np.sqrt(np.diag(cov_matrix))
+
+    if k is not None:
+        errors = np.insert(errors, 1, 0)  # Додаємо sigma_K = 0, бо K зафіксований
+
+    # Обчислюємо R²
+    ss_total = np.sum((b - np.mean(b)) ** 2)
+    ss_residual = np.sum((b - predicted) ** 2)
+    r_squared = 1 - (ss_residual / ss_total)
+
+    # Побудова графіка, якщо потрібно
+    if plot:
+        if path is None:
+            path = os.getcwd()
+        plt.figure(figsize=(12, 8))
+        plt.scatter(x, m_std - m_inst, label='Data', color='blue')
+        for i, name in enumerate(star_names):
+            plt.annotate(name, (x[i], m_std[i] - m_inst[i]), fontsize=8, alpha=0.7)
+        x_range = np.linspace(min(x), max(x), 100)
+        fit_line = coeffs[0] + (coeffs[1] * x_range if k is None else k * x_range) + coeffs[2] * np.mean(color_ind)
+        plt.plot(x_range, fit_line, color='red', label='Fit')
+        plt.xlabel('Airmass')
+        plt.ylabel('Magnitude Difference')
+        plt.title(f'Photometric Calibration in {band} Filter')
+        # plt.legend()
+        # plt.show()
+        plt.savefig(os.path.join(path, f"graph_{band}.png"))
+
+    return *coeffs, *errors, removed_stars, r_squared
+
+
 def RMS_del(A, value, B=None, log_file=None):
     '''Delete elements of array A until A.RMS>value'''
     A = np.array(A)
@@ -478,15 +589,13 @@ def read_config_stars(conf_file, log_file):
     if os.path.isfile(conf_file):
         try:
             config.read(conf_file)
-            res['kv'] = config.getfloat('Stars_Stand', 'Kv')
-            res['kb'] = config.getfloat('Stars_Stand', 'Kb')
-            res['max_m'] = config.get('Stars_Stand', 'max_m_fit', fallback="14")
-            res['rms_val'] = config.getfloat('Stars_Stand', 'A_rms', fallback=0.05)
+            res['K'] = config.getfloat('Stars_Stand', 'K', fallback=None)
+            res['max_m_fit'] = config.getfloat('Stars_Stand', 'max_m_fit', fallback="14")
+            res['max_m_calc'] = config.getfloat('Stars_Stand', 'max_m_calc', fallback="14")
+
             res['r_max_val'] = config.getfloat('Stars_Stand', 'r_max_val', fallback=6.25)
-            res['c_flag'] = config.getboolean('Stars_Stand', 'calc_C', fallback=True)
             res['snr_value'] = config.getfloat('Stars_Stand', 'snr', fallback=1.2)
-            if not res['c_flag']:
-                res['Cr'] = config.getfloat('Stars_Stand', 'C')
+            res['band'] = config.get('Stars_Stand', 'filter')
 
             res['dark_frame'] = config.get('Stars_Stand', 'dark_frame', fallback=False)
             res['dark_stable'] = config.getfloat('Stars_Stand', 'dark_stable', fallback=0.0)

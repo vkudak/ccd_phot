@@ -4,6 +4,7 @@ import json
 from astropy.stats import sigma_clipped_stats
 from astropy.io import fits
 from astropy import units as u
+from astropy.coordinates import SkyCoord
 import numpy as np
 from ephem import degree
 from numpy.ma import masked
@@ -54,7 +55,7 @@ ploting = False  # plot each frame with apertures
 # database = ["NOMAD":star_example,]
 database = []
 
-log_file = open(path + '//star_process.log', "w")
+log_file = open(os.path.join(path, 'star_process.log'), "w")
 
 if ploting:
     # for plot
@@ -80,9 +81,6 @@ if len(fl) == 0:
     log_file.write("No FIT files to process. EXIT\n")
     sys.exit()
 
-# print (fl)
-# fl = fl[0:15] + fl[55:70]
-
 
 # #################### BEGIN
 ast = AstrometryNet()
@@ -93,11 +91,7 @@ ast.api_key = conf['api_key']
 if ploting:
     fig, ax = plt.subplots()
 
-A_general = []
-c_general = []
-
 for fit_file in fl:
-    print(fit_file)
     file_with_path = os.path.join(path, fit_file)
     log_file.write("####################################################\n")
     log_file.write("filename = " + file_with_path + "\n")
@@ -195,22 +189,13 @@ for fit_file in fl:
 
     w = WCS(header)
     ra_c, dec_c = w.wcs_pix2world(xc, yc, 1)  # RA DEC of FRAME center
-    print("Grab stars from Vizier (Vmag<%s)...." % conf['max_m'])
-    log_file.write("Grab stars from Vizier (Vmag<%s)....\n" % conf['max_m'])
+    print("Grab stars from Vizier (Vmag<%s)...." % conf['max_m_fit'])
+    log_file.write("Grab stars from Vizier (Vmag<%s)....\n" % conf['max_m_fit'])
 
-    table_res = get_from_Gaia_EDR3_std(ra_c, dec_c, radius="1.5 deg", Filter={'Vmag': '<' + conf['max_m']})
+    table_res = get_from_Gaia_EDR3_std(ra_c, dec_c, radius="1.5 deg", Filter={'Vmag': '<' + str(conf['max_m_fit'])})
 
-    # table_res = get_from_LAND(ra_c, dec_c, radius="2.0deg", Filter={'Vmag': '<' + conf['max_m']})
-    # print(table_res)
-    # for star in table_res:
-    #     print(star)
-    # sys.exit()
-    # table_res = table_res["I/297/out"]  # get NOMAD data
-
-    # print(ra_c, dec_c)
-    # print(table_res)
-    # sys.exit()
     table_res = table_res['J/A+A/664/A109/table5'] # Landolt & Stetson    collection
+    # table_res = table_res['J/A+A/664/A109/table1']  # Landolt only
 
     # table_res.remove_columns(["YM", 'r', 'pmRA', 'e_pmRA', 'pmDE', 'e_pmDE', 'Jmag', 'Hmag', 'Kmag', 'R', 'r_Bmag', 'r_Vmag', 'r_Rmag'])
     table_res.sort(["Vmag"])
@@ -220,17 +205,10 @@ for fit_file in fl:
     table_res['V-R'] = table_res["Vmag"] - table_res["Rmag"]
     table_res['B-V'] = table_res["Bmag"] - table_res["Vmag"]
 
-    # print(table_res.colnames)
-    # sys.exit()
-
     len_all = len(table_res)
     log_file.write('Find %i stars\n' % len_all)
 
-    # Write code to delete variable stars from table_res
-    # print("Deleting variable stars from list....")
-    # log_file.write('Deleting variable stars...\n')
-    # table_res = del_var(table_res, Filter={'Vmag': '<' + max_m})
-    print("Stars =", len_all)
+    # print("Stars =", len_all)
     # print("Res Stars = Stars - varStars =", len(table_res))
     # log_file.write('Stars left -  %i\n' % len(table_res))
 
@@ -238,27 +216,20 @@ for fit_file in fl:
         plt.imshow(image_tmp, cmap='Greys', origin='lower')
 
     star_count = 0
-    if not conf['c_flag']:
-        log_file.write("       Name              Vmag       Rmag         Flux         A        Mz         X           Y\n")
-    else:
-        log_file.write("       Name              Vmag       Rmag      V-R            Flux       Flux_err     bkg          snr      Mz       X         Y\n")
-    # "1790-0005788      6.353     5.470    2482736.51558   22.51300  1.31407  894.32825   121.83167"
+    log_file.write("       Name             Bmag    Vmag    Rmag      B-V   V-R            Flux        Flux_err     bkg           snr     Mz       X         Y\n")
     for row in table_res:
         # print('here 0')
         # print(row["Rmag"], type(row["Rmag"]), row['Rmag'] is masked)
-        if (row["Rmag"] is not None) and (row["Vmag"] is not None) and (row["Rmag"] is not masked) and (row["Vmag"] is not masked):
+        if (
+                (row["Rmag"] is not None) and (row["Vmag"] is not None) and (row["Bmag"] is not None) and
+                (row["Rmag"] is not masked) and (row["Vmag"] is not masked) and (row["Bmag"] is not masked)
+        ):
             ra_s = row["RAJ2000"]
             dec_s = row["DEJ2000"]
 
-            from astropy.coordinates import SkyCoord
-            # print(row["RAJ2000"], type(row["RAJ2000"]))
-            # sys.exit()
             radec = SkyCoord(str(row["RAJ2000"]) + " " + str(row["DEJ2000"]), frame="icrs", unit=(u.deg, u.deg))
-            # print(radec.ra.deg)
-            # sys.exit()
 
             xs, ys = w.wcs_world2pix(radec.ra.deg, radec.dec.deg, 1)
-            # print (xs, ys, row['SimbadName'])
             if (xs > 0) and (ys > 0) and (xs < xc * 2 - 20) and (ys < yc * 2 - 20):   # cut 20 px from edges
                 star_count = star_count + 1
 
@@ -279,11 +250,7 @@ for fit_file in fl:
                     annulus_aperture = CircularAnnulus(positions, r_in=conf['an_in'], r_out=conf['an_out'])
                     phot_table = iraf_style_photometry(aperture, annulus_aperture, ph_image)
 
-                    # print(phot_table)
-                    # sys.exit()
-
                     z = 0
-
                     if len(targ_star) == 4:
                         xerr, yerr = targ_star[2], targ_star[3]
                     else:
@@ -292,19 +259,18 @@ for fit_file in fl:
                     if (xerr is np.inf) or (yerr is np.inf):
                         xerr, yerr = 8, 8
 
-                    # flux = phot_table['residual_aperture_sum'][z]
-                    # bkg_flux = phot_table['residual_bkg_sum'][z]
-                    # snr = flux / bkg_flux
-
                     flux = phot_table['flux'][z]
                     flux_err = phot_table['flux_error'][z]
 
                     fb = phot_table['flux_bkg'][z]
                     snr = phot_table['snr'][z]
 
-                    vmr = row["Vmag"] - row["Rmag"]
+                    vmr = row["V-R"] # row["Vmag"] - row["Rmag"]
                     row['Name'] = row["Name"].strip()
-                    # row['Name'] = row["Name"].rstrip()
+                    row['Name'] = ' '.join(row['Name'].split())  # remove multiple spaces inside the name
+
+                    # TODO: if name starts from 'M67' read MAGs from file m67ids.txt ?
+                    #  Make Table from this file
 
                     star = ephem.FixedBody()
                     star._ra = ephem.degrees(str(ra_s))
@@ -316,50 +282,33 @@ for fit_file in fl:
                     Mz = 1 / (math.cos(math.pi / 2 - el))
                     # print(el,ephem.degrees(el)*ephem.degree, Mz)
 
-                    if (flux > 0) and (vmr is not masked) and (abs(row["V-R"]) < 2):
-                        if conf['c_flag']:
-                            fs = str.format("{0:" ">10.3f}", flux)
-                            fes = str.format("{0:" ">8.3f}", flux_err)
-                            fbs = str.format("{0:" ">10.3f}", fb)
-                            snrs = str.format("{0:" ">10.3f}", snr)
-                            xx, yy = positions
-                            Mzs = str.format("{0:" ">3.3f}", Mz)
-                            xxs = str.format("{0:" ">8.3f}", xx)
-                            yys = str.format("{0:" ">8.3f}", yy)
-                            if snr < conf['snr_value']:  # print "*" on bed star
-                                log_file.write("%20s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s*  %5s %8s %8s\n" %
-                                               (row["Name"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
-                            else:
-                                log_file.write("%20s   %8.3f  %8.3f  %8.3f   %15s %10s %12s %5s   %5s %8s %8s\n" %
-                                               (row["Name"], row["Vmag"], row["Rmag"], vmr, fs, fes, fbs, snrs, Mzs, xxs, yys))
+                    if (flux > 0) and (vmr is not masked):
+                        fs = str.format("{0:" ">10.3f}", flux)
+                        fes = str.format("{0:" ">8.3f}", flux_err)
+                        fbs = str.format("{0:" ">10.3f}", fb)
+                        snrs = str.format("{0:" ">10.3f}", snr)
+                        xx, yy = positions
+                        Mzs = str.format("{0:" ">3.3f}", Mz)
+                        xxs = str.format("{0:" ">8.3f}", xx)
+                        yys = str.format("{0:" ">8.3f}", yy)
+                        if snr < conf['snr_value']:  # print "*" on bed star
+                            log_file.write("%-20s   %6.3f  %6.3f  %6.3f  %6.3f  %6.3f   %15s %10s %12s %5s*  %5s %8s %8s\n" %
+                                           (row["Name"], row["Bmag"], row["Vmag"], row["Rmag"],
+                                            row["B-V"], row["V-R"],
+                                            fs, fes, fbs, snrs, Mzs, xxs, yys)
+                                           )
                         else:
-                            m_inst = -2.5 * math.log10(flux/exp)
-                            A = row["Rmag"] - m_inst - (conf['kr'] * Mz) - conf['Cr'] * vmr  # <------------------ A
-
-                            # print ("%8.5f  %8.5f  %10.5f  %8.5f  %8.5f" % (row["Vmag"], math.degrees(el), Mz, ra_s, dec_s))
-                            fs = str.format("{0:" ">10.5f}", flux)
-                            xx, yy = positions
-                            xxs = str.format("{0:" ">8.5f}", xx)
-                            yys = str.format("{0:" ">8.5f}", yy)
-                            Mzs = str.format("{0:" ">3.5f}", Mz)
-                            # print("%s   %8.3f  %8.3f  %15s   %8.5f %8s %10s  %10s" % (row["NOMAD1"], row["Vmag"], row["Rmag"], fs, A, Mzs, xxs, yys))
-                            log_file.write("%20s   %8.3f  %8.3f  %15s   %8.5f %8s %10s  %10s\n" % (row["Name"], row["Vmag"], row["Rmag"], fs, A, Mzs, xxs, yys))
-
-                            if ploting:
-                                circle = Circle((xx, yy), conf['r_ap'], facecolor='none', edgecolor='green', linewidth=1, fill=False)
-                                r_in = Circle((xx, yy), conf['an_in'], facecolor='none', edgecolor='red', linewidth=1, fill=False)
-                                r_out = Circle((xx, yy), conf['an_out'], facecolor='none', edgecolor='red', linewidth=1, fill=False)
-                                ax.add_patch(circle)
-                                ax.add_patch(r_in)
-                                ax.add_patch(r_out)
-                            # sys.exit()
+                            log_file.write("%-20s   %6.3f  %6.3f  %6.3f  %6.3f  %6.3f   %15s %10s %12s %5s   %5s %8s %8s\n" %
+                                           (row["Name"], row["Bmag"], row["Vmag"], row["Rmag"],
+                                            row["B-V"], row["V-R"],
+                                            fs, fes, fbs, snrs, Mzs, xxs, yys)
+                                           )
 
                     if snr > conf['snr_value']:
                         # check if exist in DB
                         exist = False
                         save_ind = None
                         for ind in range(0, len(database)):
-                            # print(row)
                             if database[ind]["Name"] == (row["Name"]):
                                 exist = True
                                 save_ind = ind
@@ -369,8 +318,6 @@ for fit_file in fl:
                             a_snr = np.array(database[save_ind]["f/b"])
                             a_xx = np.array(database[save_ind]["X"])
                             a_yy = np.array(database[save_ind]["Y"])
-                            # a_A = np.array(database[save_ind]["A"])
-                            # a_exp = np.array(database[save_ind]["exp"])
                             database[save_ind]["Bmag"] = row["Bmag"]
                             database[save_ind]["Vmag"] = row["Vmag"]
                             database[save_ind]["Rmag"] = row["Rmag"]
@@ -381,9 +328,6 @@ for fit_file in fl:
                             database[save_ind]["Mz"] = Mz
                             database[save_ind]["X"] = np.append(a_xx, xx)
                             database[save_ind]["Y"] = np.append(a_yy, yy)
-                            # database[save_ind]["exp"] = np.append(a_exp, exp)
-                            # if not c_flag:
-                            #     database[save_ind]["A"] = np.append(a_A, A)
                         else:
                             star_e = {
                                 "Name": row["Name"],
@@ -397,11 +341,8 @@ for fit_file in fl:
                                 "Mz": Mz,
                                 "X": np.array([xx]),
                                 "Y": np.array([yy]),
-                                # "exp": np.array([exp])
-                                # "A": np.array([])
                             }
-                            # if not c_flag:
-                            #     star_e["A"] = np.array([A])
+
                             database.append(star_e)
                 except Exception as e:
                     # except Exception as e:
@@ -413,13 +354,6 @@ for fit_file in fl:
 log_file.write("\n\n")
 print("Stars = ", len(database))
 log_file.write("Stars total = %i\n" % len(database))
-
-
-# db_filename = os.path.join(path, "res_stars.bin")
-# with open(db_filename, "wb") as fdb:
-#     pickle.dump([database, exp], fdb, protocol=pickle.HIGHEST_PROTOCOL)
-#     # load database
-#     # database = pickle.load(open("res_stars.bin", "rb"))
 
 
 database = convert_ndarray(database)
