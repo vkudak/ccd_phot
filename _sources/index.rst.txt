@@ -136,29 +136,26 @@ Usage
 -----
 There is two option of ``sat_phot.py`` to start processing FITS files:
 
-   Start script from its location
-       PATH parameter where FITS files are located, must be given
+Start script from its location
+    PATH parameter where FITS files are located, must be given
 
-       .. code-block:: console
+    .. code-block:: console
 
-         python3 sat_phot.py path\to\fits\files
+      python3 sat_phot.py path\to\fits\files
 
-   Start script from FITS files folder
-       In this case your path to ``sat_phot.py`` should be added to ENVIRONMENT variables. PATH parameter should be ``.``.
+Start script from FITS files folder
+    In this case your path to ``sat_phot.py`` should be added to ENVIRONMENT variables. PATH parameter should be ``.``.
 
-       .. code-block:: console
+    .. code-block:: console
 
-         sat_phot.py .
+      sat_phot.py .
 
 
-In general ``sat_phot.py`` has few
-options:
+In general ``sat_phot.py`` has few options:
 
-   **[-c or - - config ]**    Specify config file [Optional]
-
-   **[-s or - - start_file]** Specify the name of the FITS file to start from [Optional]. Could be useful if photometry script fails in the middle of the file list. This can happen if the object is too faint. In such case you can use this option to start from required FITS. But first rename result file or it will be overwritten.
-
-   **[path]**               Path to FITS files [**REQUIRED**]
+* **[-c or - - config ]**    Specify config file [Optional]
+* **[-s or - - start_file]** Specify the name of the FITS file to start from [Optional]. Could be useful if photometry script fails in the middle of the file list. This can happen if the object is too faint. In such case you can use this option to start from required FITS. But first rename result file or it will be overwritten.
+* **[path]**               Path to FITS files [**REQUIRED**]
 
 
 
@@ -267,28 +264,27 @@ Additional scripts
 
 ccd_plot
 -----------
-
-   `ccd_plot.py`  path/to/res_file
-      Plot the LC of RSO created by `sat_phot.py` script. All parameters are set in config_sat.ini
+`ccd_plot.py`  path/to/res_file
+   Plot the LC of RSO created by `sat_phot.py` script. All parameters are set in config_sat.ini
 
 
 res_time2jd
 -----------
-   `res_time2jd.py`  path/to/res_file
-      Convert time format in the LC result file created by `sat_phot.py` script.
-      Convert from UT to JD.
+`res_time2jd.py`  path/to/res_file
+   Convert time format in the LC result file created by `sat_phot.py` script.
+   Convert from UT to JD.
 
 res_jd2time
 -----------
-   `res_jd2time.py`  path/to/res_file
-      Convert time format in the LC result file created by `sat_phot.py` script.
-      Convert from JD to UT.
+`res_jd2time.py`  path/to/res_file
+   Convert time format in the LC result file created by `sat_phot.py` script.
+   Convert from JD to UT.
 
 star_phot_flux
 --------------
-   `star_phot_flux.py`  path/to/fits/files
-      Act similat to `sat_phot.py` but produce flux for selected star.
-      Start must be marked as target in first FITS file header (KEYs `OBJX` & `OBJY`).
+`star_phot_flux.py`  path/to/fits/files
+   Act similat to `sat_phot.py` but produce flux for selected star.
+   Start must be marked as target in first FITS file header (KEYs `OBJX` & `OBJY`).
 
 
 Citing CCD_PHOT
