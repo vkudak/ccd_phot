@@ -185,6 +185,8 @@ jd2time
 
 star_phot_flux.py
 
+just test
+
 
 
 
