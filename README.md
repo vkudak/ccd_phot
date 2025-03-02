@@ -14,6 +14,8 @@ Based on:
 - photometry errors are estimated with wfc3_photometry procedures (https://github.com/spacetelescope/wfc3_photometry)
 - astroquery
 
+Detailed documentation can be found [here](https://vkudak.github.io/ccd_phot/)
+
 # Before usage
 * Virtual environment should be created and all requirements installed.
 Run scripts from this ENV in the future.
