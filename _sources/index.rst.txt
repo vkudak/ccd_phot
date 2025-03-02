@@ -7,7 +7,15 @@
 CCD_PHOT DOCUMENTATION
 ======================
 
-Python scripts to process photometry obtained on CCD QHY-174M
+This is not a package, its a collection of scripts !
+
+Python scripts to process photometry of RSO objects obtained on CCD QHY-174M-GPS (tested on ZWO analog ASI 174) and SharpCap Software.
+
+Tested Hardware & Software
+--------------------------
+* QHY 174M-GPS
+* ZWO ASI 174 MM
+* SharpCap (for work with QHY GPS module)
 
 Installation
 ============
@@ -50,7 +58,7 @@ Than you must install all requirements
    so you can use scripts right from the command line if all requirements are satisfied.
 
 
-Use for photometry of RSO
+Photometry of RSO
 =========================
 
 Prepare FITS files
@@ -156,7 +164,7 @@ options:
 
 .. _sys-calibration-label:
 
-Use for photometry system calibration
+Photometry system calibration
 =====================================
 
 Select standards
@@ -167,7 +175,7 @@ obtain good fit of coefficient of extinction K.
 
 Preferred are `Landold Equatorial Standard <https://www.eso.org/sci/observing/tools/standards/Landolt.html>`_
 but script works with `Gaia EDR3 and Johnson-Kron-Cousins standards Catalogue <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/A%2BA/664/A109>`_
-that contain [Ref]_ other standard fields such as M67 for example.
+that contain other standard fields such as M67 for example [Ref]_.
 
 All FITS files should be organized in folders by filter. For example you will have `V` folder with all FITS files
 captured in V band and `B` folder where all FITS fileas are captured in B band.
@@ -233,6 +241,26 @@ If you wish to recalculate sys parameters (Z_x, C_x, K_x) with other parameters,
 for example change max MAG of selected stars, you can do it without processing FITS files all data are already stored
 in `ref_stars_cat.json` file.
 
+References
+----------
+
+Calibration process is based on papers:
+
+1. Hu, S. M., Han, S. H., Guo, D. F., & Du, J. J. (2014).
+The photometric system of the One-meter Telescope at Weihai Observatory of Shandong University.
+Research in Astronomy and Astrophysics, 14(6), 719.
+`Link <https://iopscience.iop.org/article/10.1088/1674-4527/14/6/010/meta>`__
+
+2. Huang, F., Li, J. Z., Wang, X. F., Shang, R. C., Zhang, T. M., Hu, J. Y., ... & Jiang, X. J. (2012).
+The photometric system of the Tsinghua-NAOC 80-cm telescope at NAOC Xinglong Observatory.
+Research in Astronomy and Astrophysics, 12(11), 1585.
+`Link <https://iopscience.iop.org/article/10.1088/1674-4527/12/11/012/meta>`__
+
+3. Kinoshita, D., Chen, C. W., Lin, H. C., Lin, Z. Y., Huang, K. Y., Chang, Y. S., & Chen, W. P. (2005).
+Characteristics and performance of the CCD photometric system at Lulin observatory.
+Chinese Journal of Astronomy and Astrophysics, 5(3), 315.
+`Link <https://iopscience.iop.org/article/10.1088/1009-9271/5/3/011/meta>`__
+
 
 Additional scripts
 ==================
@@ -291,11 +319,12 @@ For example CCD_PHOT v1.0.1 should be cite Kudak V. 2024 with BibTex entry (http
      url          = {https://doi.org/10.5281/zenodo.11066198},
    }
 
-Related works:
+
+Related works
 --------------
 
 1. Kudak, V., & Perig, V. (2022). QHY-174M-GPS camera as the device for photometry of artificial satellites.
-*Artificial Satellites. Journal of Planetary Geodesy*, 57(1), 47-57. `Link <https://doi.org/10.2478/arsa-2022-0003>`_
+*Artificial Satellites. Journal of Planetary Geodesy*, 57(1), 47-57. `Link <https://doi.org/10.2478/arsa-2022-0003>`__
 
 .. toctree::
    :maxdepth: 3
