@@ -119,9 +119,9 @@ You can sort your FITS files according to some KEY from FITS headers, if there i
 
    [SITE]
    Name = OBS_NAME
-   lat = <float>
-   lon = <float>
-   h = <float>
+   lat = 48.000
+   lon = 22.000
+   h = 230.000
 
 Usage
 -----
@@ -160,12 +160,16 @@ Use for photometry system calibration
 
 Select standards
 ----------------
-Observe standards fields in your filters 30 FITS files of each field will be enough.
-You should observe different standard fields on different zenith angles (or same field on different zenith angles).
+Observe and grab standards fields in your filters. 30 FITS files of each field in one filter will be enough.
+You should observe different standard fields on different zenith angles (or same field on different zenith angles) to
+obtain good fit of coefficient of extinction K.
+
 Preferred are `Landold Equatorial Standard <https://www.eso.org/sci/observing/tools/standards/Landolt.html>`_
 but script works with `Gaia EDR3 and Johnson-Kron-Cousins standards Catalogue <https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/A%2BA/664/A109>`_
 that contain [Ref]_ other standard fields such as M67 for example.
 
+All FITS files should be organized in folders by filter. For example you will have `V` folder with all FITS files
+captured in V band and `B` folder where all FITS fileas are captured in B band.
 
 .. [Ref] Pancino, E., “The Gaia EDR3 view of Johnson-Kron-Cousins standard stars: the curated Landolt and Stetson collections”, *Astronomy and Astrophysics*, vol. 664, Art. no. A109, EDP, 2022. doi:10.1051/0004-6361/202243939.
 
@@ -174,16 +178,87 @@ that contain [Ref]_ other standard fields such as M67 for example.
 Prepare config
 --------------
 
+Example of config file is provided with scripts
+
+.. code-block::
+
+   [Stars_Stand]
+   K = 0.35           # coefficient of extinction if Band. Can be None (will be calculated) or value
+   Filter = V         # Band
+   snr = 1.0          # min star SNR
+   max_m_fit = 14.0   # max V_MAG for process on FITS files
+   max_m_calc = 13.0  # max MAG for calculations
+   r_max_val = 0.25   # delete stars with R2 more that this
+   dark_frame = path\to\dark\frame  # Path to dark frame
+   dark_stable = 0    # If no dark frame than you can subtract some value
+   FoV = 1.5          # Field of View in degrees (radius)
+
+   [APERTURE]
+   r_ap = 5
+   an_in = 10
+   an_out = 14
+
+   [astrometry.net]
+   scale_lower = 2.2         # lower limit arcsec/pix
+   scale_upper = 2.6         # upper limit arcsec/pix
+   api_key = xxxxxxxxxxx     # Astrometry.net api key
+
+   [SITE]
+   Name = OBS_NAME
+   lat = 48.000
+   lon = 22.000
+   h = 231.000
+
+Config file should be named `config_stars.ini` and created in directory with FITS files
+(in each dir, if you have many dirs for different filters).
+
+Run calibration
+---------------
+
+Similar to `sat_phot.py` system calibration scripts can be run in same ways.
+The only difference here is that we have two scripts they are stored in `sys_calibrate` folder:
+
+   `stars_process.py`  path/to/fits/files
+      Run to process all FITS files. It will produce `ref_stars_cat.json` and logs.
+      Only parameter that must be given is path to folder with FITS files.
+
+   `stars_calc_params.py` path/to/ref_stars_cat.json
+      Calculate system parameters and build the graphs.
+      System parameters will appear in stdout and in log file.
+      As the parameter set the path to `ref_stars_cat.json` file.
+
+If you wish to recalculate sys parameters (Z_x, C_x, K_x) with other parameters,
+for example change max MAG of selected stars, you can do it without processing FITS files all data are already stored
+in `ref_stars_cat.json` file.
+
+
 Additional scripts
 ==================
 
-ccd_plot.py
+ccd_plot
+-----------
 
-time2jd
+   `ccd_plot.py`  path/to/res_file
+      Plot the LC of RSO created by `sat_phot.py` script. All parameters are set in config_sat.ini
 
-jd2time
 
-star_phot_flux.py
+res_time2jd
+-----------
+   `res_time2jd.py`  path/to/res_file
+      Convert time format in the LC result file created by `sat_phot.py` script.
+      Convert from UT to JD.
+
+res_jd2time
+-----------
+   `res_jd2time.py`  path/to/res_file
+      Convert time format in the LC result file created by `sat_phot.py` script.
+      Convert from JD to UT.
+
+star_phot_flux
+--------------
+   `star_phot_flux.py`  path/to/fits/files
+      Act similat to `sat_phot.py` but produce flux for selected star.
+      Start must be marked as target in first FITS file header (KEYs `OBJX` & `OBJY`).
 
 
 
