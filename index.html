@@ -1,105 +1,262 @@
 
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
-<head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CCD_PHOT DOCUMENTATION &mdash; ccd_phot 1.0.1 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>CCD_PHOT DOCUMENTATION &#8212; ccd_phot 1.0.1 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/jquery.js?v=5d32c60e"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+    <script src="_static/documentation_options.js?v=292eb321"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'index';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
 
   
-      <script src="_static/jquery.js?v=5d32c60e"></script>
-      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=292eb321"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="_static/js/theme.js"></script>
-    <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" /> 
-</head>
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search"  style="background: darkblue" >
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
 
-          
-          
-          <a href="#" class="icon icon-home">
-            ccd_phot
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
 </div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">CCD_PHOT DOCUMENTATION</a></li>
-<li><a class="reference internal" href="#installation">Installation</a><ul>
-<li><a class="reference internal" href="#how-to-install-the-scripts">How to install the scripts</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#use-for-photometry-of-rso">Use for photometry of RSO</a><ul>
-<li><a class="reference internal" href="#prepare-fits-files">Prepare FITS files</a></li>
-<li><a class="reference internal" href="#prepare-sat-config-file">Prepare sat_config file</a></li>
-<li><a class="reference internal" href="#usage">Usage</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#use-for-photometry-system-calibration">Use for photometry system calibration</a><ul>
-<li><a class="reference internal" href="#select-standards">Select standards</a></li>
-<li><a class="reference internal" href="#prepare-config">Prepare config</a></li>
-<li><a class="reference internal" href="#run-calibration">Run calibration</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#additional-scripts">Additional scripts</a><ul>
-<li><a class="reference internal" href="#ccd-plot">ccd_plot</a></li>
-<li><a class="reference internal" href="#res-time2jd">res_time2jd</a></li>
-<li><a class="reference internal" href="#res-jd2time">res_jd2time</a></li>
-<li><a class="reference internal" href="#star-phot-flux">star_phot_flux</a></li>
-</ul>
-</li>
-</ul>
-</div>
-        </div>
-      </div>
-    </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: darkblue" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="#">ccd_phot</a>
-      </nav>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
 
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">CCD_PHOT DOCUMENTATION</li>
-      <li class="wy-breadcrumbs-aside">
-            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
-      </li>
+  
+    
+  
+
+<a class="navbar-brand logo" href="#">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ccd_phot 1.0.1 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
   </ul>
-  <hr/>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
 </div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
   <section id="ccd-phot-documentation">
-<h1>CCD_PHOT DOCUMENTATION<a class="headerlink" href="#ccd-phot-documentation" title="Link to this heading"></a></h1>
+<h1>CCD_PHOT DOCUMENTATION<a class="headerlink" href="#ccd-phot-documentation" title="Link to this heading">#</a></h1>
 <p>Python scripts to process photometry obtained on CCD QHY-174M</p>
 </section>
 <section id="installation">
-<h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
+<h1>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h1>
 <section id="how-to-install-the-scripts">
-<span id="id1"></span><h2>How to install the scripts<a class="headerlink" href="#how-to-install-the-scripts" title="Link to this heading"></a></h2>
+<span id="id1"></span><h2>How to install the scripts<a class="headerlink" href="#how-to-install-the-scripts" title="Link to this heading">#</a></h2>
 <p>You can just download the <code class="docutils literal notranslate"><span class="pre">ccd_phot</span></code> from GitHub page or clone whole repository</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/vkudak/ccd_phot.git
 </pre></div>
@@ -126,9 +283,9 @@ so you can use scripts right from the command line if all requirements are satis
 </section>
 </section>
 <section id="use-for-photometry-of-rso">
-<h1>Use for photometry of RSO<a class="headerlink" href="#use-for-photometry-of-rso" title="Link to this heading"></a></h1>
+<h1>Use for photometry of RSO<a class="headerlink" href="#use-for-photometry-of-rso" title="Link to this heading">#</a></h1>
 <section id="prepare-fits-files">
-<h2>Prepare FITS files<a class="headerlink" href="#prepare-fits-files" title="Link to this heading"></a></h2>
+<h2>Prepare FITS files<a class="headerlink" href="#prepare-fits-files" title="Link to this heading">#</a></h2>
 <p>Your RSO photometry FITS files should be in some directory.
 They should be named in order of creation, otherwise the script will lose the target.</p>
 <p>Avoid names like <code class="docutils literal notranslate"><span class="pre">file_1.fits</span></code>, <code class="docutils literal notranslate"><span class="pre">file_10.fits</span></code>, etc.
@@ -140,7 +297,7 @@ If script fails than you need to add additional keywords to the first FITS file 
 <code class="docutils literal notranslate"><span class="pre">OBJX:</span> <span class="pre">&lt;float&gt;</span></code> &amp; <code class="docutils literal notranslate"><span class="pre">OBJY:</span> <span class="pre">&lt;float&gt;</span></code> to tell the script where the target initially is situated on the frame.</p>
 </section>
 <section id="prepare-sat-config-file">
-<span id="sat-config-label"></span><h2>Prepare sat_config file<a class="headerlink" href="#prepare-sat-config-file" title="Link to this heading"></a></h2>
+<span id="sat-config-label"></span><h2>Prepare sat_config file<a class="headerlink" href="#prepare-sat-config-file" title="Link to this heading">#</a></h2>
 <p>Example of <code class="docutils literal notranslate"><span class="pre">sat_config.ini</span></code> file can be found in project root directory.
 Photometry script will try to find <code class="docutils literal notranslate"><span class="pre">config_sat.ini</span></code> in working DIR or some other INI file that will be read as config file.
 Config file has few sections (see below).</p>
@@ -189,7 +346,7 @@ Filter (band) and all other parameters are optional.</p>
 </div>
 </section>
 <section id="usage">
-<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">#</a></h2>
 <p>There is two option of <code class="docutils literal notranslate"><span class="pre">sat_phot.py</span></code> to start processing FITS files:</p>
 <blockquote>
 <div><dl>
@@ -215,9 +372,9 @@ options:</p>
 </section>
 </section>
 <section id="use-for-photometry-system-calibration">
-<span id="sys-calibration-label"></span><h1>Use for photometry system calibration<a class="headerlink" href="#use-for-photometry-system-calibration" title="Link to this heading"></a></h1>
+<span id="sys-calibration-label"></span><h1>Use for photometry system calibration<a class="headerlink" href="#use-for-photometry-system-calibration" title="Link to this heading">#</a></h1>
 <section id="select-standards">
-<h2>Select standards<a class="headerlink" href="#select-standards" title="Link to this heading"></a></h2>
+<h2>Select standards<a class="headerlink" href="#select-standards" title="Link to this heading">#</a></h2>
 <p>Observe and grab standards fields in your filters. 30 FITS files of each field in one filter will be enough.
 You should observe different standard fields on different zenith angles (or same field on different zenith angles) to
 obtain good fit of coefficient of extinction K.</p>
@@ -229,12 +386,13 @@ captured in V band and <cite>B</cite> folder where all FITS fileas are captured 
 <div role="list" class="citation-list">
 <div class="citation" id="ref" role="doc-biblioentry">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">Ref</a><span class="fn-bracket">]</span></span>
-<p>Pancino, E., “The Gaia EDR3 view of Johnson-Kron-Cousins standard stars: the curated Landolt and Stetson collections”, <em>Astronomy and Astrophysics</em>, vol. 664, Art. no. A109, EDP, 2022. doi:10.1051/0004-6361/202243939.</p>
+<p>Pancino, E., “The Gaia EDR3 view of Johnson-Kron-Cousins standard stars: the curated Landolt and Stetson collections”,
+<em>Astronomy and Astrophysics</em>, vol. 664, Art. no. A109, EDP, 2022. <a class="reference external" href="https://doi.org/10.1051/0004-6361/202243939">DOI</a>.</p>
 </div>
 </div>
 </section>
 <section id="prepare-config">
-<h2>Prepare config<a class="headerlink" href="#prepare-config" title="Link to this heading"></a></h2>
+<h2>Prepare config<a class="headerlink" href="#prepare-config" title="Link to this heading">#</a></h2>
 <p>Example of config file is provided with scripts</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">Stars_Stand</span><span class="p">]</span>
 <span class="n">K</span> <span class="o">=</span> <span class="mf">0.35</span>           <span class="c1"># coefficient of extinction if Band. Can be None (will be calculated) or value</span>
@@ -268,7 +426,7 @@ captured in V band and <cite>B</cite> folder where all FITS fileas are captured 
 (in each dir, if you have many dirs for different filters).</p>
 </section>
 <section id="run-calibration">
-<h2>Run calibration<a class="headerlink" href="#run-calibration" title="Link to this heading"></a></h2>
+<h2>Run calibration<a class="headerlink" href="#run-calibration" title="Link to this heading">#</a></h2>
 <p>Similar to <cite>sat_phot.py</cite> system calibration scripts can be run in same ways.
 The only difference here is that we have two scripts they are stored in <cite>sys_calibrate</cite> folder:</p>
 <blockquote>
@@ -288,9 +446,9 @@ in <cite>ref_stars_cat.json</cite> file.</p>
 </section>
 </section>
 <section id="additional-scripts">
-<h1>Additional scripts<a class="headerlink" href="#additional-scripts" title="Link to this heading"></a></h1>
+<h1>Additional scripts<a class="headerlink" href="#additional-scripts" title="Link to this heading">#</a></h1>
 <section id="ccd-plot">
-<h2>ccd_plot<a class="headerlink" href="#ccd-plot" title="Link to this heading"></a></h2>
+<h2>ccd_plot<a class="headerlink" href="#ccd-plot" title="Link to this heading">#</a></h2>
 <blockquote>
 <div><dl class="simple">
 <dt><cite>ccd_plot.py</cite>  path/to/res_file</dt><dd><p>Plot the LC of RSO created by <cite>sat_phot.py</cite> script. All parameters are set in config_sat.ini</p>
@@ -299,7 +457,7 @@ in <cite>ref_stars_cat.json</cite> file.</p>
 </div></blockquote>
 </section>
 <section id="res-time2jd">
-<h2>res_time2jd<a class="headerlink" href="#res-time2jd" title="Link to this heading"></a></h2>
+<h2>res_time2jd<a class="headerlink" href="#res-time2jd" title="Link to this heading">#</a></h2>
 <blockquote>
 <div><dl class="simple">
 <dt><cite>res_time2jd.py</cite>  path/to/res_file</dt><dd><p>Convert time format in the LC result file created by <cite>sat_phot.py</cite> script.
@@ -309,7 +467,7 @@ Convert from UT to JD.</p>
 </div></blockquote>
 </section>
 <section id="res-jd2time">
-<h2>res_jd2time<a class="headerlink" href="#res-jd2time" title="Link to this heading"></a></h2>
+<h2>res_jd2time<a class="headerlink" href="#res-jd2time" title="Link to this heading">#</a></h2>
 <blockquote>
 <div><dl class="simple">
 <dt><cite>res_jd2time.py</cite>  path/to/res_file</dt><dd><p>Convert time format in the LC result file created by <cite>sat_phot.py</cite> script.
@@ -319,7 +477,7 @@ Convert from JD to UT.</p>
 </div></blockquote>
 </section>
 <section id="star-phot-flux">
-<h2>star_phot_flux<a class="headerlink" href="#star-phot-flux" title="Link to this heading"></a></h2>
+<h2>star_phot_flux<a class="headerlink" href="#star-phot-flux" title="Link to this heading">#</a></h2>
 <blockquote>
 <div><dl class="simple">
 <dt><cite>star_phot_flux.py</cite>  path/to/fits/files</dt><dd><p>Act similat to <cite>sat_phot.py</cite> but produce flux for selected star.
@@ -327,37 +485,155 @@ Start must be marked as target in first FITS file header (KEYs <cite>OBJX</cite>
 </dd>
 </dl>
 </div></blockquote>
+</section>
+</section>
+<section id="citing-ccd-phot">
+<h1>Citing CCD_PHOT<a class="headerlink" href="#citing-ccd-phot" title="Link to this heading">#</a></h1>
+<p>If you use CCD_PHOT for a project that leads to a publication, whether directly or as a dependency of another package,
+please include the following acknowledgment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">This</span> <span class="n">research</span> <span class="n">made</span> <span class="n">use</span> <span class="n">of</span> <span class="n">CCD_PHOT</span> <span class="n">scripts</span> <span class="n">used</span> <span class="k">for</span>
+<span class="n">photometry</span> <span class="n">of</span> <span class="n">RSO</span> <span class="ow">and</span> <span class="n">photometry</span> <span class="n">system</span> <span class="n">calibration</span> <span class="p">(</span><span class="n">Kudak</span> <span class="n">V</span><span class="o">.</span> <span class="o">&lt;</span><span class="n">YEAR</span><span class="o">&gt;</span><span class="p">)</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>BibTex files for all Photutils versions can be found at <a class="reference external" href="https://doi.org/10.5281/zenodo.11066198">https://doi.org/10.5281/zenodo.11066198</a></p>
+<p>For example CCD_PHOT v1.0.1 should be cite Kudak V. 2024 with BibTex entry (<a class="reference external" href="https://zenodo.org/records/11066198/export/bibtex">https://zenodo.org/records/11066198/export/bibtex</a>)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@software</span><span class="p">{</span><span class="n">viktor_kudak_2024_11066198</span><span class="p">,</span>
+  <span class="n">author</span>       <span class="o">=</span> <span class="p">{</span><span class="n">Viktor</span> <span class="n">Kudak</span><span class="p">},</span>
+  <span class="n">title</span>        <span class="o">=</span> <span class="p">{</span><span class="n">vkudak</span><span class="o">/</span><span class="n">ccd</span>\<span class="n">_phot</span><span class="p">:</span> <span class="mf">1.0.1</span><span class="p">},</span>
+  <span class="n">month</span>        <span class="o">=</span> <span class="n">apr</span><span class="p">,</span>
+  <span class="n">year</span>         <span class="o">=</span> <span class="mi">2024</span><span class="p">,</span>
+  <span class="n">publisher</span>    <span class="o">=</span> <span class="p">{</span><span class="n">Zenodo</span><span class="p">},</span>
+  <span class="n">version</span>      <span class="o">=</span> <span class="p">{</span><span class="mf">1.0.1</span><span class="p">},</span>
+  <span class="n">doi</span>          <span class="o">=</span> <span class="p">{</span><span class="mf">10.5281</span><span class="o">/</span><span class="n">zenodo</span><span class="mf">.11066198</span><span class="p">},</span>
+  <span class="n">url</span>          <span class="o">=</span> <span class="p">{</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">doi</span><span class="o">.</span><span class="n">org</span><span class="o">/</span><span class="mf">10.5281</span><span class="o">/</span><span class="n">zenodo</span><span class="mf">.11066198</span><span class="p">},</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<section id="related-works">
+<h2>Related works:<a class="headerlink" href="#related-works" title="Link to this heading">#</a></h2>
+<p>1. Kudak, V., &amp; Perig, V. (2022). QHY-174M-GPS camera as the device for photometry of artificial satellites.
+<em>Artificial Satellites. Journal of Planetary Geodesy</em>, 57(1), 47-57. <a class="reference external" href="https://doi.org/10.2478/arsa-2022-0003">Link</a></p>
 <div class="toctree-wrapper compound">
 </div>
 </section>
 </section>
 
 
-           </div>
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#">CCD_PHOT DOCUMENTATION</a></li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-to-install-the-scripts">How to install the scripts</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#use-for-photometry-of-rso">Use for photometry of RSO</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prepare-fits-files">Prepare FITS files</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prepare-sat-config-file">Prepare sat_config file</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#use-for-photometry-system-calibration">Use for photometry system calibration</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#select-standards">Select standards</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prepare-config">Prepare config</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-calibration">Run calibration</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#additional-scripts">Additional scripts</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#ccd-plot">ccd_plot</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#res-time2jd">res_time2jd</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#res-jd2time">res_jd2time</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#star-phot-flux">star_phot_flux</a></li>
+</ul>
+</li>
+<li class="toc-h1 nav-item toc-entry"><a class="reference internal nav-link" href="#citing-ccd-phot">Citing CCD_PHOT</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-works">Related works:</a></li>
+</ul>
+</li>
+</ul>
+
+  </nav></div>
+
+</div></div>
+              
+            
           </div>
-          <footer>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Kudak Viktor.</p>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
   </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
 
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
 
-</footer>
-        </div>
-      </div>
-    </section>
-  </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
+  <p class="copyright">
+    
+      © Copyright 2025, Kudak Viktor.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
 
-</body>
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.1.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
 </html>
