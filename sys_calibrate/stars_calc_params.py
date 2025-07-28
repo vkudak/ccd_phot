@@ -208,7 +208,7 @@ log_file.write(f"Z_{band} = {Z:6.3f} ± {sigma_Z:6.4f}\n")
 if conf['K'] is None:
     log_file.write(f"K_{band} = {K:6.4f} ± {sigma_K:6.4f}\n")
 log_file.write(f"C_{band} = {C:6.4f} ± {sigma_C:6.4f}\n")
-log_file.write(f"R^2 = {r2:6.4f}")
+log_file.write(f"R^2 = {r2:6.4f}\n")
 log_file.write(f"m_corr_coef = {m_corr_coef:6.4f}")
 
 log_file.close()
