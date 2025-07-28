@@ -146,7 +146,7 @@ if len(star_names_arr) == 0:
 
 
 if conf["K"] is None:
-    Z, K, C, sigma_Z, sigma_K, sigma_C, removed_stars, r2 = (
+    Z, K, C, sigma_Z, sigma_K, sigma_C, removed_stars, r2, m_corr_coef = (
         solve_photometric_coefficients(m_inst_arr, m_std_arr, x_arr, c_ind_arr, star_names_arr, band,
                                        threshold=conf['r_max_val'],
                                        log_file=log_file,
@@ -155,7 +155,7 @@ if conf["K"] is None:
     )
 
 else:
-    Z, K, C, sigma_Z, sigma_K, sigma_C, removed_stars, r2 = (
+    Z, K, C, sigma_Z, sigma_K, sigma_C, removed_stars, r2, m_corr_coef = (
         solve_photometric_coefficients(m_inst_arr, m_std_arr, x_arr, c_ind_arr, star_names_arr, band,
                                        threshold=conf['r_max_val'],
                                        log_file=log_file,
@@ -170,6 +170,7 @@ if conf['K'] is None:
     print(f"K_{band} = {K:6.4f} ± {sigma_K:6.4f}")
 print(f"C_{band} = {C:6.4f} ± {sigma_C:6.4f}")
 print(f"R^2 = {r2:6.4f}")
+print(f"m_corr_coef = {m_corr_coef:6.4f}")
 
 
 for i in range(len(database)):
@@ -208,5 +209,6 @@ if conf['K'] is None:
     log_file.write(f"K_{band} = {K:6.4f} ± {sigma_K:6.4f}\n")
 log_file.write(f"C_{band} = {C:6.4f} ± {sigma_C:6.4f}\n")
 log_file.write(f"R^2 = {r2:6.4f}")
+log_file.write(f"m_corr_coef = {m_corr_coef:6.4f}")
 
 log_file.close()

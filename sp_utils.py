@@ -4,6 +4,7 @@ import os
 import sys
 # from astropy.stats import mad_std
 from scipy.optimize import curve_fit
+from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 import matplotlib
 
@@ -61,19 +62,19 @@ def solve_photometric_coefficients(m_inst, m_std, x, color_ind, star_names, band
 
     Parameters:
     m_inst (array): Instrumental Magnitudes.
-    m_std (array): Standard Magnitudes (Landolt catalogue or other).
-    x (array): Air mass of Star.
-    color_ind (array): Color index of Star (B-V or other).
-    star_names (array): Star names.
-    band(str): Band (Filter).
-    threshold (float): Threshold for rejection of stars (Default = 0.25).
-    log_file (file obj): Log file to write to OR None.
-    k (float or None): If None, k is determined, otherwise it is constant.
-    plot (bool): If True, plot the Graph.
-    path (string): Path to save the figure.
+    M_std (array): Standard Magnitudes (Landolt catalogue or other).
+    X (array): Air mass of Star.
+    Color_ind (array): Color index of Star (B-V or other).
+    Star_names (array): Star names.
+    Band(str): Band (Filter).
+    Threshold (float): Threshold for rejection of stars (Default = 0.25).
+    Log_file (file obj): Log file to write to OR None.
+    K (float or None): If None, k is determined, otherwise it is constant.
+    Plot (bool): If True, plot the Graph.
+    Path (string): Path to save the figure.
 
     Returns:
-    tuple: (Z, K, C, sigma_Z, sigma_K, sigma_C, removed_stars)
+    tuple: (Z, K, C, sigma_Z, sigma_K, sigma_C, removed_stars, r_squared, corr_coef)
     """
     m_inst = np.array(m_inst)
     m_std = np.array(m_std)
@@ -188,7 +189,9 @@ def solve_photometric_coefficients(m_inst, m_std, x, color_ind, star_names, band
         plt.savefig(os.path.join(path, f"calibrated_mags_{band}.png"))
         plt.close()
 
-    return *coeffs, *errors, removed_stars, r_squared
+    corr_coef = pearsonr(m_std, calibrated_magnitudes)[0]
+
+    return *coeffs, *errors, removed_stars, r_squared, corr_coef
 
 
 def RMS_del(A, value, B=None, log_file=None):
