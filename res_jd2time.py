@@ -1,6 +1,7 @@
 import sys
 import os
 import numpy as np
+import glob
 
 from astropy.time import Time
 
