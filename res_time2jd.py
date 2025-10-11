@@ -59,7 +59,7 @@ if __name__ == "__main__":
         # we got path with mask
         filelist = glob.glob(filename)
 
-    
+
     for filename in filelist:
         wd = os.path.dirname(filename)
         base = os.path.basename(filename)

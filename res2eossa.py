@@ -1,580 +1,442 @@
-import sys
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+EOSSA v3.1.1 compliant converter for .phX photometry files -> EOSSA FITS (binary table)
+
+One-file, modular script. Functions:
+ - read_phx_file(path) -> (header_dict, recarray)
+ - build_eossa_table(header, table_rows) -> numpy structured array (EOSSA dtype)
+ - write_eossa_fits(outpath, primary_meta, eossa_array)
+
+Notes / assumptions:
+ - Input .phX files contain header lines beginning with '#' as in example and a whitespace-separated table
+   whose first non-comment line is the column names (e.g. "Date  UT  X  Y ... filename").
+ - Az/El in degrees are present (columns named like 'Az(deg)' and 'El(deg)').
+ - Rg column is in Mm (column name 'Rg(Mm)') as in example.
+ - If RA/DEC are not present, they will be computed from Az/El using observer location from header.
+ - Eph_* and Met_* will be identical (we only have ephemeris-based values), per user instruction.
+ - Solar disk fraction is approximated geometrically (linear interpolation across solar radius).
+
+Requires: astropy, numpy
+
+"""
+
+from __future__ import annotations
+
 import os
-import numpy as np
-import glob
-
-from datetime import datetime
-
-from astropy.io import fits
-from astropy.time import Time # Зовнішній інструмент для роботи з JD та UTC [4]
-
 import re
-from typing import Dict, Any, Union, List, Tuple
+import math
+from typing import Tuple, Dict, Any
+
+import numpy as np
+from astropy.io import fits
+from astropy.time import Time
+from astropy.coordinates import EarthLocation, AltAz, SkyCoord, get_sun
+import astropy.units as u
 
 
-# Константа для стандартної дальності нормалізації (1000 км)
-DISTANCE_NORM_KM = 1000.0
-# Placeholder для 32-bit Integer (J) [7]
+# --- Constants / placeholders ---
 PLACEHOLDER_INT = -2147483648
+PLACEHOLDER_FLOAT = -9999.0
+EOSSA_VERSION = "3.1.1"
+CLASSIF_VALUE = "UNCLASS"
 
+# approximate solar angular radius (deg) — small variation with distance ignored here
+SOLAR_ANGULAR_RADIUS_DEG = 0.2666
 
-# --- 1. Визначення Метаданих EOSSA ---
-
-# Визначення обов'язкових полів для наземного сенсора (згідно з Таблицею K-2 [5])
-# TTYPE: назва колонки, TFORM: формат FITS (наприклад, D для Double, A для ASCII, J для 32-bit Integer, 2D для пари Double)
-REQUIRED_EOSSA_COLUMNS_METADATA = [
-    # UTC & Time
-    {'name': 'UTC_Begin_exp', 'format': '23A', 'unit': 'yyyy-mm-ddThh:mm:ss.sss'}, # [5]
-    {'name': 'UTC_End_exp', 'format': '23A', 'unit': 'yyyy-mm-ddThh:mm:ss.sss'}, # [5]
-    {'name': 'JD_Mid_Exp', 'format': 'D', 'unit': 'days'}, # [5]
-    {'name': 'Exp_Duration', 'format': 'D', 'unit': 'sec'}, # [5]
-
-    # Photometry & Filters
-    {'name': 'Cur_Spec_Filt_Num', 'format': 'J', 'unit': 'num'}, # [5]
-    {'name': 'Cur_ND_Filt_Num', 'format': 'J', 'unit': 'num'}, # [6]
-    {'name': 'Mag_Exo_Atm', 'format': 'D', 'unit': 'mag'}, # Позаатмосферна зоряна величина (mr) [6]
-    {'name': 'Mag_Range_Norm', 'format': 'D', 'unit': 'mag'}, # Нормована за дальністю (Mr) [6]
-
-    # Astrometry & Geometry (приклад скорочено, але включено важливі поля)
-    {'name': 'Tel_Obj_Range', 'format': 'D', 'unit': 'm'}, # Відстань до цілі [7]
-    {'name': 'Eph_RA_DE', 'format': '2D', 'unit': 'deg'}, # Predicted RA/Dec (Ефемериди) [6]
-    {'name': 'Met_RA_DE', 'format': '2D', 'unit': 'deg'}, # Measured RA/Dec [6]
-    {'name': 'Eph_Az_El', 'format': '2D', 'unit': 'deg'}, # Predicted RA/Dec (Ефемериди) [6]
-    {'name': 'Met_Az_El', 'format': '2D', 'unit': 'deg'}, # Predicted RA/Dec (Ефемериди) [6]
+# Required ground-based K-2 columns (14 fields). We'll add a few related/error fields that are common.
+EOSSA_COLUMNS = [
+    ("UTC_Begin_exp", "U23"),      # 23A / string
+    ("UTC_End_exp", "U23"),        # 23A
+    ("JD_Mid_Exp", "f8"),          # D
+    ("Exp_Duration", "f8"),        # D
+    ("Cur_Spec_Filt_Num", "i4"),   # J
+    ("Cur_ND_Filt_Num", "i4"),     # J
+    ("Mag_Exo_Atm", "f8"),        # D
+    ("Mag_Exo_Atm_Unc", "f8"),    # D (recommended)
+    ("Mag_Range_Norm", "f8"),     # D
+    ("Eph_RA_DE", ("f8", 2)),      # 2D
+    ("Met_RA_DE", ("f8", 2)),      # 2D
+    ("Eph_AZ_EL", ("f8", 2)),      # 2D
+    ("Met_AZ_EL", ("f8", 2)),      # 2D
+    ("Sun_AZ_EL", ("f8", 2)),      # 2D
+    ("Tel_Obj_Range", "f8"),      # 1D meters
+    ("Solar_Disk_Frac", "f8"),    # 1D (0..1)
 ]
 
 
-def transform_data_to_stream(
-        date_time: List[str],
-        flux: List[float],
-        flux_err: List[float],
-        mag: List[float],
-        mag_err: List[float],
-        Az: List[float],
-        El: List[float],
-        Rg: List[float],
-        dt_value: float = 0.1  # Параметр dt має бути відомий з шапки файлу
-    ) -> List[Dict[str, Any]]:
+# --------------------- I/O: read .phX ---------------------
+def read_phx_file(path: str) -> Tuple[Dict[str, str], np.ndarray]:
+    """Parse .phX file.
+
+    Returns:
+        header: dictionary of header key -> value (from lines starting with '#')
+        data: numpy.recarray of table data (column names taken from first non-comment line after header)
     """
-    Перетворює паралельні списки даних на список словників.
+    header: Dict[str, str] = {}
+    tle_block = []
+    table_lines = []
+    with open(path, 'r', encoding='utf-8') as fh:
+        in_tle = False
+        for raw in fh:
+            line = raw.rstrip('\n')
+            stripped = line.strip()
+            if not stripped:
+                continue
+            if stripped.startswith('#'):
+                body = stripped.lstrip('#').strip()
+                # handle TLE block marker
+                if body == 'TLE:':
+                    in_tle = True
+                    tle_block = []
+                    continue
+                if in_tle:
+                    tle_block.append(body)
+                    if len(tle_block) == 3:
+                        header['TLE_LINE0'] = tle_block[0]
+                        header['TLE_LINE1'] = tle_block[1]
+                        header['TLE_LINE2'] = tle_block[2]
+                        in_tle = False
+                    continue
+                # parse key = value if present
+                if '=' in body:
+                    parts = re.split(r'\s*=\s*', body, maxsplit=1)
+                    if len(parts) == 2:
+                        key, val = parts
+                        header[key.strip()] = val.strip()
+                        continue
+                # other header-only lines (for example start/end times without '=')
+                # attempt to detect ISO datetimes (e.g. 2025-08-18 19:12:57.981767)
+                if re.match(r'^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}', body):
+                    # store sequentially as START_TIME and END_TIME if not present
+                    if 'START_TIME' not in header:
+                        header['START_TIME'] = body
+                    elif 'END_TIME' not in header:
+                        header['END_TIME'] = body
+                    continue
+                # otherwise skip
+            else:
+                # non-comment line -> part of table; include as-is
+                table_lines.append(line)
 
-    :param dt_value: Значення 'dt', зчитане з шапки файлу.
-    :return: Список словників з структурованими даними.
-    """
+    if not table_lines:
+        raise ValueError(f"No data table found in {path}")
 
-    # 1. Створюємо список кортежів, де кожен кортеж - це один "рядок" даних.
-    #    Ми використовуємо 'zip' для поєднання елементів з усіх списків.
-    #    Важливо: dt ігнорується, тому що це константне значення з шапки.
-    zipped_data = zip(date_time, mag, Rg, Az, El)
+    # The first non-comment line is header (column names)
+    # Normalize spaces and split -> column names
+    header_line = table_lines[0].strip()
+    colnames = re.split(r'\s+', header_line)
 
-    result_stream = []
-
-    for row_data in zipped_data:
-        # row_data - це кортеж: (date_time_str, magV, Rg, Az, El)
-        # 3. Формуємо словник для поточного рядка
-        data_row = {
-            'Date UT': row_data[0].strftime("%Y-%m-%d"),
-            'Time Start': row_data[0].strftime("%H:%M:%S.%f"),
-            'dt': dt_value,  # Константне значення з шапки файлу
-            'magV': row_data[1],
-            'Rg(Mm)': row_data[2],
-            'Az(deg)': row_data[3],
-            'El(deg)': row_data[4],
-            "RA(deg)": 0.00,
-            "DEC(deg)": 0.00
-        }
-        result_stream.append(data_row)
-
-    return result_stream
-
-
-def read_header_to_dict(filepath: str) -> Dict[str, Any]:
-    """
-    Зчитує дані із шапки файлу (до початку табличних даних) і повертає їх у вигляді словника.
-
-    Спеціально обробляє:
-    1. Коментарі (починаються з '#').
-    2. Блок TLE (три наступні рядки після '# TLE:').
-    3. Два наступні рядки після TLE як час початку і кінця ('START_TIME', 'END_TIME').
-    4. Пари 'ключ = значення' (ігноруючи пробіли).
-
-    :param filepath: Шлях до файлу.
-    :return: Словник з назвами та їх значеннями.
-    """
-    header_data: Dict[str, Any] = {}
-
-    # Стан для TLE
-    in_tle_block = False
-    tle_lines = []
-
-    # Стан для часу
-    time_lines_read = 0
-
-    # Регулярний вираз для пошуку пар 'ключ = значення'
-    key_value_pattern = re.compile(r'^\s*(\w+)\s*=\s*(.+)$')
-
-    # Список для тимчасового зберігання рядків часу, незалежно від TLE
-    potential_time_lines = []
-
+    # The remaining lines are data rows; use np.genfromtxt on a string buffer
+    from io import StringIO
+    data_text = '\n'.join(table_lines[1:])
+    # Use genfromtxt with names=colnames
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            for line in f:
-                # Видаляємо зайві пробіли з кінців рядка
-                stripped_line = line.strip()
+        data = np.genfromtxt(StringIO(data_text), dtype=None, names=colnames, encoding='utf-8')
+    except Exception:
+        # fallback: read as float columns and build recarray
+        data = np.genfromtxt(StringIO(data_text), names=colnames, dtype=None, encoding='utf-8')
 
-                # Рядок, з якого видалені символи коментаря
-                cleaned_line = stripped_line.lstrip('#').strip()
-
-                # --- КРОК 1: Обробка блоку TLE ---
-                if in_tle_block:
-                    # Додаємо повний рядок (включно з '#') до TLE
-                    tle_lines.append(stripped_line)
-                    if len(tle_lines) == 3:
-                        header_data['TLE'] = tuple(tle_lines)
-                        in_tle_block = False
-                    continue
-
-                if stripped_line == '# TLE:':
-                    in_tle_block = True
-                    continue
-
-                # --- КРОК 2: Збір потенційних рядків часу ---
-                # Збираємо перші два НЕ порожні рядки, які не є TLE, і не є "ключ = значення"
-                if not in_tle_block and time_lines_read < 2:
-                    if cleaned_line and not key_value_pattern.match(cleaned_line):
-                        # Перевіряємо, чи це не заголовок стовпців
-                        if len(cleaned_line.split()) > 4 and (' ' in cleaned_line or '\t' in cleaned_line):
-                            # Якщо це схоже на рядок заголовків таблиці, припиняємо зчитування шапки
-                            break
-
-                        # Зберігаємо чистий рядок (без '#')
-                        potential_time_lines.append(cleaned_line)
-                        time_lines_read += 1
-
-                        # Якщо ми знайшли два рядки, додаємо їх у словник
-                        if time_lines_read == 2:
-                            header_data['START_TIME'] = potential_time_lines[0]
-                            header_data['END_TIME'] = potential_time_lines[1]
-                        continue
-
-                # --- КРОК 3: Обробка 'ключ = значення' ---
-                if cleaned_line:
-                    match = key_value_pattern.match(cleaned_line)
-                    if match:
-                        key = match.group(1).strip()
-                        value = match.group(2).strip()
-
-                        # Спроба конвертувати числові значення
-                        try:
-                            if re.fullmatch(r'[-+]?\d+$', value):
-                                header_data[key] = int(value)
-                            elif re.fullmatch(r'[-+]?\d*\.\d+|\d+', value):
-                                header_data[key] = float(value)
-                            else:
-                                header_data[key] = value.replace('"', '').replace("'", '')
-                        except ValueError:
-                            header_data[key] = value.replace('"', '').replace("'", '')
-
-                        continue
-
-                # --- КРОК 4: Припинення зчитування шапки ---
-                # Якщо рядок не є порожнім, коментарем, TLE, часом, або 'ключ = значення',
-                # це, ймовірно, початок табличних даних.
-                if stripped_line and not stripped_line.startswith('#'):
-                    break
-
-    except FileNotFoundError:
-        print(f"Помилка: Файл не знайдено за шляхом '{filepath}'")
-        return {}
-
-    return header_data
+    return header, data
 
 
-def read_data(fname):
-    date_time = []
-    date, time = np.genfromtxt(fname, unpack=True, skip_header=True, usecols=(0, 1), dtype=None, encoding="utf-8")
-    x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg = \
-        np.genfromtxt(fname, skip_header=True,
-                      usecols=(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12,),
-                      unpack=True)
-    fit_file = np.genfromtxt(fname, unpack=True, skip_header=True, usecols=(-1, ), dtype=None, encoding="utf-8")
+# --------------------- Utility: parse date/time & compute mid/JD ---------------------
+def make_utc_strings_and_mid_jd(date_str: str, time_str: str, dt_seconds: float) -> Tuple[str, str, float]:
+    """Given date 'YYYY-MM-DD' and time 'HH:MM:SS.sss', return UTC_begin_str, UTC_end_str (both ISO like yyyy-mm-ddThh:mm:ss.sss) and JD_mid (float).
 
-    for i in range(0, len(date)):
-        date_time.append(datetime.strptime(date[i] + ' ' + time[i] + "000", "%Y-%m-%d %H:%M:%S.%f"))
+    Note: we keep 6 fractional seconds digits (microseconds) where available.
+    """
+    # Try to parse time with optional fractional seconds
+    iso_in = f"{date_str} {time_str}"
+    # Some files may have 3 or 6 fractional digits; use astropy Time for reliable JD
+    t_start = Time(iso_in, format='iso', scale='utc')
+    t_end = Time(t_start.jd + (dt_seconds / 86400.0), format='jd', scale='utc')
+    t_mid = Time((t_start.jd + t_end.jd) / 2.0, format='jd', scale='utc')
 
-    return date_time, x, y, xerr, yerr, flux, flux_err, mag, mag_err, Az, El, Rg, fit_file
-
-
-# # --- ФУНКЦІЯ 1: Створення об'єктів Column ---
-#
-# def create_eossa_columns(columns_metadata: list) -> list:
-#     """
-#     Створює список об'єктів fits.Column на основі визначених метаданих EOSSA.
-#     Ця функція відповідає за визначення структури таблиці FITS (TTYPEn, TFORMn, TUNITn).
-#     """
-#     column_objects = []
-#     for col_def in columns_metadata:
-#         # Створення об'єкта fits.Column згідно з вимогами FITS/EOSSA [1, 2]
-#         column = fits.Column(
-#             name=col_def['name'],  # TTYPEn
-#             format=col_def['format'],  # TFORMn
-#             unit=col_def.get('unit', '')  # TUNITn (рекомендовано) [1]
-#         )
-#         column_objects.append(column)
-#
-#     return column_objects
-#
-#
-# # --- ФУНКЦІЯ 2: Заповнення даними та створення таблиці ---
-#
-# def populate_eossa_data_table(column_definitions: list, metadata: dict, observations: list) -> fits.BinTableHDU:
-#     """
-#     Заповнює створені об'єкти Column даними та створює об'єкт BinTableHDU.
-#
-#     Args:
-#         column_definitions: Список fits.Column об'єктів (створених ФУНКЦІЄЮ 1).
-#         metadata: Загальні метадані (наприклад, TLE, назви, час).
-#         observations: Список фактичних рядків спостережень.
-#
-#     Returns:
-#         Об'єкт astropy.io.fits.BinTableHDU.
-#     """
-#     num_rows = len(observations)
-#     data_columns = {}
-#
-#     # 1. Ініціалізація порожніх масивів для кожного стовпця
-#     for col_def in column_definitions:
-#         # Визначення типу numpy на основі формату FITS TFORM [8]
-#         fmt = col_def.format
-#         if 'A' in fmt:
-#             dtype = f'U{int(fmt.replace("A", "")) if fmt.replace("A", "").isdigit() else 23}'  # Приклад для A
-#         elif 'D' in fmt:
-#             dtype = np.float64
-#         elif 'J' in fmt:
-#             dtype = np.int32
-#         else:
-#             dtype = np.float64  # За замовчуванням
-#
-#         # Обробка векторних полів (наприклад, 2D)
-#         count = int(fmt.replace('D', '')) if fmt.replace('D', '').isdigit() and 'D' in fmt else 1
-#
-#         # Якщо це вектор, створюємо масив з відповідними розмірами
-#         if count > 1:
-#             data_columns[col_def.name] = np.empty((num_rows, count), dtype=dtype)
-#         else:
-#             data_columns[col_def.name] = np.empty(num_rows, dtype=dtype)
-#
-#     # 2. Заповнення масивів даними
-#     # Тут використовуємо дані з нашої історії розмови як приклад [9]
-#
-#     # ПРИКЛАД ВХІДНИХ ДАНИХ (для однієї точки спостереження)
-#     obs_data = observations
-#
-#     # Перетворення часу
-#     print(obs_data)
-#     t_start = Time(obs_data['Date UT'] + obs_data['Time Start'], format='iso', scale='utc')
-#     t_end = Time(obs_data['Date UT'] + obs_data['Time End'], format='iso', scale='utc')
-#     t_mid = t_start + (t_end - t_start) / 2
-#
-#     # Заповнення колонками
-#
-#     # 1. UTC & Time
-#     data_columns['UTC_Begin_exp'] = t_start.iso.replace(' ', 'T')[:23]
-#     data_columns['UTC_End_exp'] = t_end.iso.replace(' ', 'T')[:23]
-#     data_columns['JD_Mid_Exp'] = t_mid.jd
-#     data_columns['Exp_Duration'] = obs_data['Exp_Duration']
-#
-#     # 2. Photometry & Filters (використовуємо приклади з попередньої розмови)
-#     # Змінні Mag_Exo_Atm та Mag_Range_Norm:
-#     mag_exo_atm = 6.602  # Припустиме значення після денормалізації/обчислень
-#     mag_range_norm = obs_data['magV']  # 6.587 (якщо magV вважається вже нормованим) [9]
-#
-#     data_columns['Mag_Exo_Atm'] = mag_exo_atm
-#     data_columns['Mag_Range_Norm'] = mag_range_norm
-#
-#     # Використовуємо заглушки або константи для відсутніх/фіксованих полів
-#     data_columns['Cur_Spec_Filt_Num'] = 1  # Зазвичай 1, якщо не мультиспектральні [5]
-#     data_columns['Cur_ND_Filt_Num'] = -2147483648  # Placeholder для 32-bit integer (J) [6, 8]
-#
-#     # 3. Geometry (використовуємо дані з прикладу)
-#     # Tel_Obj_Range (1231.248 Mm = 1231248000 м)
-#     range_m = obs_data['Rg(Mm)'] * 10 ** 6
-#     data_columns['Tel_Obj_Range'] = range_m
-#
-#     # RA/DE, AZ/EL - для прикладу використовуємо нульові значення або дані з вхідного файлу
-#     # Вхідні дані містять Az(deg) і El(deg), але не RA/Dec.
-#     # Для демонстрації заповнення 2D-векторів:
-#     # Припускаємо, що Met_AZ_EL — це (Az, El) [10].
-#     data_columns['Met_RA_DE'] = [obs_data['RA'], obs_data['DE']]  # Якщо ці значення були обчислені
-#     data_columns['Eph_RA_DE'] = [obs_data['RA_Eph'], obs_data['DE_Eph']]  # Якщо ці значення були обчислені
-#
-#     data_columns['Met_AZ_EL'] = [obs_data['Az(deg)'], obs_data['El(deg)']]  # [9]
-#
-#     # 3. Створення об'єкта таблиці FITS
-#     c = fits.ColDefs(column_definitions)
-#     hdu = fits.BinTableHDU.from_columns(c, nrows=num_rows)
-#
-#     return hdu
+    # Format strings to 23 chars like 'yyyy-mm-ddThh:mm:ss.sss' (keep microseconds up to 6 digits)
+    utc_begin = t_start.iso.replace(' ', 'T')[:23]
+    utc_end = t_end.iso.replace(' ', 'T')[:23]
+    jd_mid = t_mid.jd
+    return utc_begin, utc_end, jd_mid
 
 
-def create_primary_hdu_header():
-    """Створює Primary Header (HDU0)."""
-    hdr = fits.Header()
-    # Обов'язкові ключові слова Primary Header [15, 16]
-    hdr['SIMPLE'] = (True, 'file does conform to FITS standard')
-    hdr['BITPIX'] = (8, 'number of bits per data pixel')
-    hdr['NAXIS'] = (0, 'number of data axes')
-    hdr['EXTEND'] = (True, 'FITS dataset may contain extensions')
-    hdr['CLASSIF'] = ('UNCLASS', 'Security classification level') [15]
-    # END додається автоматично
-    return fits.PrimaryHDU(header=hdr)
+# --------------------- Compute RA/DEC from Az/El ---------------------
+def azel_to_radec(az_deg: float, el_deg: float, obs_time: Time, site_lat: float, site_lon: float, site_elev_m: float) -> Tuple[float, float]:
+    """Convert Az/El (deg) in local horizon frame to ICRS RA/Dec (deg) for given observer and time.
+
+    Returns (ra_deg, dec_deg).
+    """
+    location = EarthLocation(lat=site_lat * u.deg, lon=site_lon * u.deg, height=site_elev_m * u.m)
+    altaz = AltAz(obstime=obs_time, location=location)
+    sc = SkyCoord(az=az_deg * u.deg, alt=el_deg * u.deg, frame=altaz)
+    icrs = sc.transform_to('icrs')
+    return float(icrs.ra.degree), float(icrs.dec.degree)
 
 
-# Визначення dtype для NumPy/FITS_rec (використовується для створення структури)
-# Це допомагає гарантувати, що кожен рядок має правильний формат перед об'єднанням.
-def get_numpy_dtype_from_metadata(columns_metadata):
-    """Створює структурований dtype для NumPy масиву на основі метаданих FITS."""
-    np_dtypes = []
-    for col_def in columns_metadata:
-        name = col_def['name']
-        fmt = col_def['format']
+# --------------------- Build EOSSA structured array ---------------------
+def build_eossa_array(header: Dict[str, str], data_rows: np.ndarray) -> np.ndarray:
+    """Create a NumPy structured array conforming to the required EOSSA ground-based columns (K-2).
 
-        # Визначення типу та розміру
-        if 'A' in fmt:
-            size = int(fmt.replace('A', '')) if fmt.replace('A', '').isdigit() else 23  # UTC size
-            dtype = f'U{size}'
-            count = 1
-        elif 'D' in fmt:
-            dtype = np.float64
-            count = int(fmt.replace('D', '')) if fmt.replace('D', '').isdigit() else 1
-        elif 'J' in fmt:
-            dtype = np.int32
-            count = 1
+    header: parsed header dict (should contain SITE_LAT, SITE_LON, SITE_ELEV, dt, NORAD, NAME, etc.)
+    data_rows: numpy.recarray with columns from file (expected: Date, UT, Az(deg), El(deg), Rg(Mm), magB or mag etc.)
+    """
+    n = len(data_rows)
+    # Build dtype dynamically to include vector 2D where required
+    dtype_list = []
+    for name, fmt in EOSSA_COLUMNS:
+        if isinstance(fmt, tuple):
+            # ("f8", 2)
+            dtype_list.append((name, np.float64, fmt[1]))
         else:
-            dtype = np.float64
-            count = 1
+            dtype_list.append((name, np.float64 if fmt == 'f8' else (np.int32 if fmt == 'i4' else 'U23')))
 
-        if count > 1:
-            np_dtypes.append((name, dtype, count))
-        else:
-            np_dtypes.append((name, dtype))
-    return np.dtype(np_dtypes)
+    # But we want exact types: override mapping
+    # Let's explicitly define dtype according to EOSSA_COLUMNS
+    dtype = np.dtype([
+        ('UTC_Begin_exp', 'U23'),
+        ('UTC_End_exp', 'U23'),
+        ('JD_Mid_Exp', np.float64),
+        ('Exp_Duration', np.float64),
+        ('Cur_Spec_Filt_Num', np.int32),
+        ('Cur_ND_Filt_Num', np.int32),
+        ('Mag_Exo_Atm', np.float64),
+        ('Mag_Exo_Atm_Unc', np.float64),
+        ('Mag_Range_Norm', np.float64),
+        ('Eph_RA_DE', np.float64, (2,)),
+        ('Met_RA_DE', np.float64, (2,)),
+        ('Eph_AZ_EL', np.float64, (2,)),
+        ('Met_AZ_EL', np.float64, (2,)),
+        ('Sun_AZ_EL', np.float64, (2,)),
+        ('Tel_Obj_Range', np.float64),
+        ('Solar_Disk_Frac', np.float64),
+    ])
 
+    out = np.empty(n, dtype=dtype)
 
-# Створення структури NumPy DTYPE
-EOSSA_DTYPE = get_numpy_dtype_from_metadata(REQUIRED_EOSSA_COLUMNS_METADATA)
+    # Observer location
+    try:
+        site_lat = float(header.get('SITE_LAT', header.get('TELLAT', '0')))
+        site_lon = float(header.get('SITE_LON', header.get('TELLONG', '0')))
+        site_elev = float(header.get('SITE_ELEV', header.get('TELALT', '0')))
+    except Exception:
+        site_lat = 0.0
+        site_lon = 0.0
+        site_elev = 0.0
 
+    # exposure dt
+    try:
+        dt_val = float(header.get('dt', header.get('DT', header.get('Exp_Duration', 0.0))))
+    except Exception:
+        dt_val = 0.0
 
-# --- ФУНКЦІЯ 1: Створення об'єктів Column ---
-# Ця функція визначає лише заголовок/структуру, але не дані.
-def create_eossa_columns(columns_metadata: list) -> fits.ColDefs:
-    """Створює об'єкт fits.ColDefs, який описує структуру таблиці."""
-    column_objects = []
-    for col_def in columns_metadata:
-        column = fits.Column(
-            name=col_def['name'],
-            format=col_def['format'],
-            unit=col_def.get('unit', '')
-        )
-        column_objects.append(column)
+    # filter (from filename extension .phX)
+    filt = None
+    m = re.search(r"\.ph([A-Za-z0-9])$", os.path.basename(header.get('FILENAME', '')))
+    if m:
+        filt = m.group(1)
+    # default spec filter index
+    cur_spec_filt_num = 1
 
-    return fits.ColDefs(column_objects)
+    # parse Rg column name possibilities
+    rg_name = None
+    for cand in ['Rg(Mm)', 'Rg', 'Rg_Mm', 'Rg(Mm)']:
+        if cand in data_rows.dtype.names:
+            rg_name = cand
+            break
+    # parse az/el names
+    az_name = next((c for c in data_rows.dtype.names if 'Az' in c), None)
+    el_name = next((c for c in data_rows.dtype.names if 'El' in c or 'el' in c), None)
+    # parse mag name
+    mag_name = next((c for c in data_rows.dtype.names if re.search(r"mag", c, flags=re.I)), None)
+    mag_err_name = next((c for c in data_rows.dtype.names if re.search(r"mag_err|magerr|mag_err", c, flags=re.I)), None)
 
+    # date/time names (common: Date and UT)
+    date_col = next((c for c in data_rows.dtype.names if re.match(r'Date', c, flags=re.I)), None)
+    time_col = next((c for c in data_rows.dtype.names if re.match(r'UT|Time', c, flags=re.I)), None)
 
-# --- ФУНКЦІЯ 2: Обробка ОДНОГО РЯДКА ---
-# На вхід – один словник (рядок), на виході – один структурований елемент даних.
+    # If data_rows[time_col] contains microseconds in different format, astropy Time still parses
 
-def process_single_observation(obs_data: dict) -> np.void:
-    """
-    Обробляє один рядок вхідних даних, виконує необхідні розрахунки
-    (наприклад, денормалізацію) і повертає його у вигляді структурованого елемента.
-    """
-    # Створення пустого структурованого масиву на 1 рядок
-    single_row = np.empty(1, dtype=EOSSA_DTYPE)
-
-    # 1. Обчислення часу та тривалості
-    # (Припускаємо, що в obs_data є 'Date UT' та інші поля часу)
-    # print(obs_data['Date UT'] + obs_data['Time Start'])
-    t_start = Time(obs_data['Date UT'] + " " + obs_data['Time Start'], format='iso', scale='utc', precision=6)
-    t_end = Time(obs_data['Date UT'] + " " + obs_data['Time Start'], format='iso', scale='utc',
-                 precision=6)  # Використовуємо початок, оскільки Exp_Duration = 0.1s
-    t_end += obs_data['dt'] / 24.0 / 3600.0  # Припускаємо dt = 0.1s
-    t_mid = t_start + (t_end - t_start) / 2
-
-    single_row['UTC_Begin_exp'] = t_start.iso.replace(' ', 'T')[:23]
-    single_row['UTC_End_exp'] = t_end.iso.replace(' ', 'T')[:23]
-    single_row['JD_Mid_Exp'] = t_mid.jd
-    single_row['Exp_Duration'] = obs_data['dt']  # 0.1 секунди, якщо dt = 0.1
-
-    # 2. Фотометрія та нормалізація дальності
-
-    # Mag_Range_Norm (Mr) - це вхідне значення magV (згідно з вашим описом)
-    M_r = obs_data['magV']
-
-    # Tel_Obj_Range (d) - відстань у Мегаметрах (Mm). Переводимо в метри.
-    d_km = obs_data['Rg(Mm)'] * 1000.0
-
-    # Денормалізація: m_r = M_r + 5 * log10(d / D)
-    # Mag_Exo_Atm (mr) [9, 10]
-    m_r = M_r + 5.0 * np.log10(d_km / DISTANCE_NORM_KM)
-
-    single_row['Mag_Range_Norm'] = M_r
-    single_row['Mag_Exo_Atm'] = m_r
-
-    # 3. Геометрія
-    single_row['Tel_Obj_Range'] = d_km * 1000.0  # м
-    single_row['Cur_Spec_Filt_Num'] = 1
-    single_row['Cur_ND_Filt_Num'] = PLACEHOLDER_INT  # Немає нейтрального фільтра [7]
-
-    # Векторні поля (2D)
-    # Eph_RA_DE, Met_RA_DE (Припускаємо, що RA/DE обчислюються)
-    print(single_row)
-    print(single_row.keys())
-    single_row['Eph_RA_DE'] = np.array([0.0, 0.0])  # Заглушка, оскільки ці дані відсутні у вихідному файлі
-    single_row['Met_RA_DE'] = np.array([0.0, 0.0])
-
-    # Eph_AZ_EL, Met_AZ_EL (Вхідні дані містять Az(deg) і El(deg))
-    single_row['Eph_AZ_EL'] = np.array([0.0, 0.0])  # Ефемеридні Азимут/Елевація
-    single_row['Met_AZ_EL'] = np.array([obs_data['Az(deg)'], obs_data['El(deg)']])  # Виміряні Азимут/Елевація [8]
-
-    # Solar_Phase_Ang (Припускаємо, що обчислюється)
-    single_row['Solar_Phase_Ang'] = -9999.0  # Placeholder для D [7]
-
-    return single_row  # Повертаємо єдиний структурований елемент
-
-
-# --- ГОЛОВНА ЛОГІКА СКРИПТУ: ЗБІРКА ДАНИХ ТА ФІНАЛІЗАЦІЯ ---
-
-def finalize_eossa_table(collected_rows: list, column_definitions: fits.ColDefs) -> fits.BinTableHDU:
-    """
-    Об'єднує всі зібрані рядки та створює фінальний об'єкт FITS BinTableHDU.
-    """
-    if not collected_rows:
-        return None, 0
-
-    # Об'єднання всіх окремих структурованих елементів у єдиний NumPy масив
-    final_data_array = np.stack(collected_rows)
-
-    # Створення об'єкта FITS HDU
-    # astropy автоматично визначає NAXIS2 (кількість рядків)
-    hdu = fits.BinTableHDU.from_columns(column_definitions, data=final_data_array)
-
-    # Кількість рядків (data_len) буде автоматично записана в заголовок як NAXIS2
-    data_len = len(final_data_array)
-
-    # Оновлення заголовка (додавання обов'язкових ключових слів, які залежать від кількості полів)
-    hdu.header['TFIELDS'] = len(column_definitions)  # TFIELDS (Number of fields) [11]
-    hdu.header['NAXIS2'] = data_len
-
-    return hdu, data_len
-
-
-if __name__ == "__main__":
-    filename = sys.argv[1]
-
-    if os.path.isfile(filename):
-        filelist = [filename]
-    else:
-        # we got path with mask
-        filelist = glob.glob(filename)
-
-    for filename in filelist:
-        wd = os.path.dirname(filename)
-        base = os.path.basename(filename)
-        fname, ext = os.path.splitext(base)
-
-        header = read_header_to_dict(filename)
-        ymd = header['START_TIME'][11].strip('-')
-        ut1 = (header['START_TIME'][11:])
-        ut1 = ut1[:-4].strip(':')
-        band = ext[2:]
-        eossa_path = os.path.join(wd,
-                                  "result_" + str(header['NORAD']) + "_" + ymd + "_UT" + ut1 + "_" + band + ".eossa")
-
-
-        date_time, _, _, _, _, flux, flux_err, mag, mag_err, Az, El, Rg, _ = read_data(filename)
-
-        # obs_data = list(zip(date_time, flux, flux_err, mag, mag_err, Az, El, Rg))
-        obs_data = transform_data_to_stream(
-            date_time,
-            flux,
-            flux_err,
-            mag,
-            mag_err,
-            Az,
-            El,
-            Rg,
-            dt_value=header['dt']  # Припустимо, що dt = 0.1
-        )
-
-        #TODO: calc (RA, DEC) to each row
-        # print(obs_data[:2])
-
-        # # Крок 1: Створення визначень колонок (Функція 1)
-        # eossa_column_definitions = create_eossa_columns(REQUIRED_EOSSA_COLUMNS_METADATA)
-        #
-        # # Крок 2: Заповнення таблиці даними (Функція 2)
-        # # Ми передаємо визначення колонок та фактичні дані для заповнення
-        # binary_table_hdu = populate_eossa_data_table(eossa_column_definitions, {}, obs_data)
-        #
-        # primary_hdu = create_primary_hdu_header()
-        # # 4. Об'єднання та запис у файл
-        # hdul = fits.HDUList([primary_hdu, binary_table_hdu])
-        #
-        # # Перевірка на існування та перезапис
-        # if os.path.exists(eossa_path):
-        #     os.remove(eossa_path)
-        #
-        # try:
-        #     hdul.writeto(eossa_path, overwrite=True)
-        #     hdul.close()
-        # except Exception as e:
-        #     print(f"Помилка при записі FITS-файлу: {e}")
-
-
-
-
-        # 1. Визначення структури FITS (Крок 1)
-        eossa_column_definitions = create_eossa_columns(REQUIRED_EOSSA_COLUMNS_METADATA)
-
-        # 2. Ініціалізація списку для збору даних
-        collected_rows = []
-
-        print("--- Обробка потоку даних по одному рядку ---")
-
-        for data_row in obs_data:
-            # Крок 2: Обробка одного рядка (виконується в процесі)
-            processed_entry = process_single_observation(data_row)
-            collected_rows.append(processed_entry)
-            print(f"Оброблено запис JD: {processed_entry['JD_Mid_Exp']:.5f}")
-
-        # 4. Фіналізація таблиці (виконується в кінці скрипту)
-        final_hdu, data_len = finalize_eossa_table(collected_rows, eossa_column_definitions)
-
-        if final_hdu:
-            print("\n--- ФІНАЛІЗАЦІЯ ТАБЛИЦІ EOSSA ---")
-            print(f"Загальна кількість рядків (NAXIS2): {data_len}")
-
-            # Перевірка заповнення обов'язкового поля NAXIS2
-            print(f"Значення NAXIS2 у заголовку: {final_hdu.header.get('NAXIS2')}")
-
-            # Виведення перших 5 значень Mag_Exo_Atm для демонстрації
-            print("\nПерші 5 значень Mag_Exo_Atm (позаатмосферна, денормована):")
-            # Примітка: Mag_Exo_Atm має бути близькою до Mag_Range_Norm (magV), але трохи більшою
-            # оскільки d (1231 км) > D (1000 км).
-            print(final_hdu.data['Mag_Exo_Atm'][:5])
-
-            # primary_hdu = create_primary_hdu_header()
-            # 4. Об'єднання та запис у файл
-            hdul = fits.HDUList(final_hdu)
-
-            # Перевірка на існування та перезапис
-            if os.path.exists(eossa_path):
-                os.remove(eossa_path)
-
+    for i in range(n):
+        row = data_rows[i]
+        date_str = str(row[date_col]) if date_col else ''
+        time_str = str(row[time_col]) if time_col else ''
+        # build begin/end/jd
+        if date_str and time_str:
             try:
-                hdul.writeto(eossa_path, overwrite=True)
-                hdul.close()
-            except Exception as e:
-                print(f"Помилка при записі FITS-файлу: {e}")
+                utc_begin, utc_end, jd_mid = make_utc_strings_and_mid_jd(date_str, time_str, dt_val)
+            except Exception:
+                # fallback: try without fractional parts
+                t_iso = f"{date_str} {time_str}"
+                t0 = Time(t_iso, format='iso', scale='utc')
+                t_end = Time(t0.jd + (dt_val / 86400.0), format='jd', scale='utc')
+                t_mid = Time((t0.jd + t_end.jd) / 2.0, format='jd', scale='utc')
+                utc_begin = t0.iso.replace(' ', 'T')[:23]
+                utc_end = t_end.iso.replace(' ', 'T')[:23]
+                jd_mid = t_mid.jd
+        else:
+            utc_begin = ''
+            utc_end = ''
+            jd_mid = np.nan
 
+        out['UTC_Begin_exp'][i] = utc_begin
+        out['UTC_End_exp'][i] = utc_end
+        out['JD_Mid_Exp'][i] = jd_mid
+        out['Exp_Duration'][i] = dt_val
+        out['Cur_Spec_Filt_Num'][i] = cur_spec_filt_num
+        out['Cur_ND_Filt_Num'][i] = PLACEHOLDER_INT
+
+        # magnitude and range
+        mag_val = float(row[mag_name]) if mag_name and row[mag_name] != '' else np.nan
+        mag_unc = float(row[mag_err_name]) if mag_err_name and row[mag_err_name] != '' else np.nan
+        rg_mm = float(row[rg_name]) if rg_name and row[rg_name] != '' else np.nan
+
+        # Range-normalized magnitude (1000 km) per doc: Mag_Range_Norm = mag + 5*log10(d_km / 1000)
+        # since d_km = rg_mm * 1000 => d_km/1000 = rg_mm
+        if np.isfinite(mag_val) and np.isfinite(rg_mm) and rg_mm > 0:
+            mag_range_norm = mag_val + 5.0 * math.log10(rg_mm)
+        else:
+            mag_range_norm = np.nan
+
+        # Mag_Exo_Atm: without atmospheric correction available, set equal to Mag_Range_Norm
+        mag_exo_atm = mag_range_norm
+
+        out['Mag_Exo_Atm'][i] = mag_exo_atm if np.isfinite(mag_exo_atm) else PLACEHOLDER_FLOAT
+        out['Mag_Exo_Atm_Unc'][i] = mag_unc if np.isfinite(mag_unc) else PLACEHOLDER_FLOAT
+        out['Mag_Range_Norm'][i] = mag_range_norm if np.isfinite(mag_range_norm) else PLACEHOLDER_FLOAT
+
+        # Az/El
+        az = float(row[az_name]) if az_name and row[az_name] != '' else np.nan
+        el = float(row[el_name]) if el_name and row[el_name] != '' else np.nan
+        out['Eph_AZ_EL'][i, 0] = az if np.isfinite(az) else PLACEHOLDER_FLOAT
+        out['Eph_AZ_EL'][i, 1] = el if np.isfinite(el) else PLACEHOLDER_FLOAT
+        out['Met_AZ_EL'][i, 0] = out['Eph_AZ_EL'][i, 0]
+        out['Met_AZ_EL'][i, 1] = out['Eph_AZ_EL'][i, 1]
+
+        # Tel_Obj_Range (meters)
+        out['Tel_Obj_Range'][i] = rg_mm * 1e6 if np.isfinite(rg_mm) else np.nan
+
+        # Compute RA/DEC from Az/El (use mid-exposure time)
+        try:
+            obs_time = Time(out['JD_Mid_Exp'][i], format='jd', scale='utc')
+            ra_deg, dec_deg = azel_to_radec(az, el, obs_time, site_lat, site_lon, site_elev)
+            out['Eph_RA_DE'][i, 0] = ra_deg
+            out['Eph_RA_DE'][i, 1] = dec_deg
+            out['Met_RA_DE'][i, 0] = ra_deg
+            out['Met_RA_DE'][i, 1] = dec_deg
+        except Exception:
+            out['Eph_RA_DE'][i, :] = PLACEHOLDER_FLOAT
+            out['Met_RA_DE'][i, :] = PLACEHOLDER_FLOAT
+
+        # Sun AZ/EL at mid time
+        try:
+            tmid = Time(out['JD_Mid_Exp'][i], format='jd', scale='utc')
+            location = EarthLocation(lat=site_lat * u.deg, lon=site_lon * u.deg, height=site_elev * u.m)
+            sun = get_sun(tmid)
+            sun_altaz = sun.transform_to(AltAz(obstime=tmid, location=location))
+            sun_az = float(sun_altaz.az.deg)
+            sun_alt = float(sun_altaz.alt.deg)
+            out['Sun_AZ_EL'][i, 0] = sun_az
+            out['Sun_AZ_EL'][i, 1] = sun_alt
+            # estimate solar disk fraction visible above horizon (simple linear approx):
+            r = SOLAR_ANGULAR_RADIUS_DEG
+            frac = (sun_alt + r) / (2.0 * r)
+            frac = max(0.0, min(1.0, frac))
+            out['Solar_Disk_Frac'][i] = frac
+        except Exception:
+            out['Sun_AZ_EL'][i, :] = PLACEHOLDER_FLOAT
+            out['Solar_Disk_Frac'][i] = PLACEHOLDER_FLOAT
+
+    return out
+
+
+# --------------------- Write FITS ---------------------
+def write_eossa_fits(out_path: str, header_meta: Dict[str, Any], eossa_array: np.ndarray):
+    """Write primary header + EOSSA binary table to out_path (overwrite).
+
+    header_meta: dictionary possibly containing TELESCOP, SITE_LAT, SITE_LON, SITE_ELEV, NORAD, NAME, etc.
+    eossa_array: structured array matching EOSSA dtype
+    """
+    # Primary HDU
+    prihdr = fits.Header()
+    prihdr['SIMPLE'] = (True, 'standard FITS')
+    prihdr['BITPIX'] = (8, 'bytes')
+    prihdr['NAXIS'] = (0, 'no image')
+    prihdr['EXTEND'] = (True, 'extensions follow')
+    prihdu = fits.PrimaryHDU(header=prihdr)
+
+    # Table HDU
+    bintab = fits.BinTableHDU(data=eossa_array)
+
+    # Fill required EOSSA header keywords for ground-based (Appendix K table K-1)
+    # Use defaults if missing
+    bintab.header['EXTNAME'] = os.path.basename(out_path)
+    bintab.header['CLASSIF'] = header_meta.get('CLASSIF', CLASSIF_VALUE)
+    bintab.header['VERS'] = EOSSA_VERSION
+    bintab.header['OBSEPH'] = header_meta.get('OBSEPH', 'GROUND')
+    bintab.header['TELESCOP'] = header_meta.get('SITE_NAME', header_meta.get('TELESCOP', 'UNKNOWN'))
+    # lat/lon/elev
+    try:
+        bintab.header['TELLAT'] = float(header_meta.get('SITE_LAT', header_meta.get('TELLAT', 0.0)))
+        bintab.header['TELLONG'] = float(header_meta.get('SITE_LON', header_meta.get('TELLONG', 0.0)))
+        bintab.header['TELALT'] = float(header_meta.get('SITE_ELEV', header_meta.get('TELALT', 0.0)))
+    except Exception:
+        pass
+
+    bintab.header['OBSNAME'] = header_meta.get('SITE_NAME', '')
+    bintab.header['OBJEPH'] = header_meta.get('OBJEPH', 'TLE')
+    bintab.header['OBJTYPE'] = header_meta.get('OBJTYPE', 'SCN')
+    if 'NORAD' in header_meta:
+        try:
+            bintab.header['OBJNUM'] = int(header_meta['NORAD'])
+        except Exception:
+            bintab.header['OBJNUM'] = header_meta['NORAD']
+    bintab.header['OBJECT'] = header_meta.get('NAME', header_meta.get('OBJECT', ''))
+
+    # Add TLE lines if available
+    if 'TLE_LINE0' in header_meta and 'TLE_LINE1' in header_meta:
+        bintab.header['TLELN1'] = header_meta.get('TLE_LINE1', '')
+        bintab.header['TLELN2'] = header_meta.get('TLE_LINE2', '')
+
+    hdul = fits.HDUList([prihdu, bintab])
+    hdul.writeto(out_path, overwrite=True)
+    return out_path
+
+
+# --------------------- High-level converter ---------------------
+def convert_phx_to_eossa(phx_path: str, out_fits: str | None = None) -> str:
+    if out_fits is None:
+        base = os.path.splitext(os.path.basename(phx_path))[0]
+        out_fits = base + '.eossa.fits'
+
+    header, data = read_phx_file(phx_path)
+    # add filename to header so build_eossa_array can see it if needed
+    header['FILENAME'] = os.path.basename(phx_path)
+
+    eossa_array = build_eossa_array(header, data)
+    write_eossa_fits(out_fits, header, eossa_array)
+    print(f"Wrote EOSSA file: {out_fits}")
+    return out_fits
+
+
+# --------------------- CLI ---------------------
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Convert .phX photometry file to EOSSA v3.1.1 FITS (binary table)')
+    parser.add_argument('input', help='Input .phX file (or directory)')
+    parser.add_argument('-o', '--out', help='Output FITS file (or directory for many)', default=None)
+    args = parser.parse_args()
+
+    inp = args.input
+    out = args.out
+    if os.path.isdir(inp):
+        # process all .ph* files
+        files = [os.path.join(inp, f) for f in os.listdir(inp) if re.match(r'.*\.ph.', f)]
+        out_dir = out or inp
+        for f in files:
+            base = os.path.splitext(os.path.basename(f))[0]
+            out_path = os.path.join(out_dir, base + '.eossa.fits')
+            convert_phx_to_eossa(f, out_path)
+    else:
+        out_path = out
+        convert_phx_to_eossa(inp, out_path)
