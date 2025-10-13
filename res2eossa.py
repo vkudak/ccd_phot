@@ -1,442 +1,305 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EOSSA v3.1.1 compliant converter for .phX photometry files -> EOSSA FITS (binary table)
-
-One-file, modular script. Functions:
- - read_phx_file(path) -> (header_dict, recarray)
- - build_eossa_table(header, table_rows) -> numpy structured array (EOSSA dtype)
- - write_eossa_fits(outpath, primary_meta, eossa_array)
-
-Notes / assumptions:
- - Input .phX files contain header lines beginning with '#' as in example and a whitespace-separated table
-   whose first non-comment line is the column names (e.g. "Date  UT  X  Y ... filename").
- - Az/El in degrees are present (columns named like 'Az(deg)' and 'El(deg)').
- - Rg column is in Mm (column name 'Rg(Mm)') as in example.
- - If RA/DEC are not present, they will be computed from Az/El using observer location from header.
- - Eph_* and Met_* will be identical (we only have ephemeris-based values), per user instruction.
- - Solar disk fraction is approximated geometrically (linear interpolation across solar radius).
-
-Requires: astropy, numpy
-
+EOSSA FITS Converter v3.1.1
+Конвертер фотометричних .phX файлів у FITS формат згідно стандарту EOSSA v3.1.1
 """
 
-from __future__ import annotations
-
 import os
-import re
-import math
-from typing import Tuple, Dict, Any
-
+import sys
+import glob
+import argparse
 import numpy as np
+from datetime import datetime
 from astropy.io import fits
 from astropy.time import Time
 from astropy.coordinates import EarthLocation, AltAz, SkyCoord, get_sun
 import astropy.units as u
+import re
 
-
-# --- Constants / placeholders ---
+# === Constants === #
+DISTANCE_NORM_KM = 1000.0
 PLACEHOLDER_INT = -2147483648
-PLACEHOLDER_FLOAT = -9999.0
-EOSSA_VERSION = "3.1.1"
-CLASSIF_VALUE = "UNCLASS"
-
-# approximate solar angular radius (deg) — small variation with distance ignored here
-SOLAR_ANGULAR_RADIUS_DEG = 0.2666
-
-# Required ground-based K-2 columns (14 fields). We'll add a few related/error fields that are common.
-EOSSA_COLUMNS = [
-    ("UTC_Begin_exp", "U23"),      # 23A / string
-    ("UTC_End_exp", "U23"),        # 23A
-    ("JD_Mid_Exp", "f8"),          # D
-    ("Exp_Duration", "f8"),        # D
-    ("Cur_Spec_Filt_Num", "i4"),   # J
-    ("Cur_ND_Filt_Num", "i4"),     # J
-    ("Mag_Exo_Atm", "f8"),        # D
-    ("Mag_Exo_Atm_Unc", "f8"),    # D (recommended)
-    ("Mag_Range_Norm", "f8"),     # D
-    ("Eph_RA_DE", ("f8", 2)),      # 2D
-    ("Met_RA_DE", ("f8", 2)),      # 2D
-    ("Eph_AZ_EL", ("f8", 2)),      # 2D
-    ("Met_AZ_EL", ("f8", 2)),      # 2D
-    ("Sun_AZ_EL", ("f8", 2)),      # 2D
-    ("Tel_Obj_Range", "f8"),      # 1D meters
-    ("Solar_Disk_Frac", "f8"),    # 1D (0..1)
-]
 
 
-# --------------------- I/O: read .phX ---------------------
-def read_phx_file(path: str) -> Tuple[Dict[str, str], np.ndarray]:
-    """Parse .phX file.
+# === Reading the header in phX === #
+def read_header_to_dict(filepath):
+    header_data = {}
+    tle_lines = []
+    in_tle_block = False
+    key_value_pattern = re.compile(r'^#?\s*(\w+)\s*=\s*(.+)$')
 
-    Returns:
-        header: dictionary of header key -> value (from lines starting with '#')
-        data: numpy.recarray of table data (column names taken from first non-comment line after header)
-    """
-    header: Dict[str, str] = {}
-    tle_block = []
-    table_lines = []
-    with open(path, 'r', encoding='utf-8') as fh:
-        in_tle = False
-        for raw in fh:
-            line = raw.rstrip('\n')
+    with open(filepath, 'r', encoding='utf-8') as f:
+        for line in f:
             stripped = line.strip()
-            if not stripped:
+            if stripped == '':
                 continue
-            if stripped.startswith('#'):
-                body = stripped.lstrip('#').strip()
-                # handle TLE block marker
-                if body == 'TLE:':
-                    in_tle = True
-                    tle_block = []
-                    continue
-                if in_tle:
-                    tle_block.append(body)
-                    if len(tle_block) == 3:
-                        header['TLE_LINE0'] = tle_block[0]
-                        header['TLE_LINE1'] = tle_block[1]
-                        header['TLE_LINE2'] = tle_block[2]
-                        in_tle = False
-                    continue
-                # parse key = value if present
-                if '=' in body:
-                    parts = re.split(r'\s*=\s*', body, maxsplit=1)
-                    if len(parts) == 2:
-                        key, val = parts
-                        header[key.strip()] = val.strip()
-                        continue
-                # other header-only lines (for example start/end times without '=')
-                # attempt to detect ISO datetimes (e.g. 2025-08-18 19:12:57.981767)
-                if re.match(r'^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}', body):
-                    # store sequentially as START_TIME and END_TIME if not present
-                    if 'START_TIME' not in header:
-                        header['START_TIME'] = body
-                    elif 'END_TIME' not in header:
-                        header['END_TIME'] = body
-                    continue
-                # otherwise skip
-            else:
-                # non-comment line -> part of table; include as-is
-                table_lines.append(line)
+            if stripped.startswith('# TLE:'):
+                in_tle_block = True
+                tle_lines = []
+                continue
+            if in_tle_block:
+                tle_lines.append(stripped.lstrip('#').strip())
+                if len(tle_lines) == 3:
+                    header_data['TLE'] = tuple(tle_lines)
+                    in_tle_block = False
+                continue
 
-    if not table_lines:
-        raise ValueError(f"No data table found in {path}")
+            m = key_value_pattern.match(stripped)
+            if m:
+                key, val = m.group(1).strip(), m.group(2).strip()
+                header_data[key.upper()] = val.replace('"', '')
 
-    # The first non-comment line is header (column names)
-    # Normalize spaces and split -> column names
-    header_line = table_lines[0].strip()
-    colnames = re.split(r'\s+', header_line)
+    return header_data
 
-    # The remaining lines are data rows; use np.genfromtxt on a string buffer
+
+# === Reading the table in phX === #
+def read_data(fname):
+    """
+    Read table part of *.phX file, deleting char '#' from header
+    Automatically determines the number of columns even with uneven spacing
+    """
+    with open(fname, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+
+    # find first row that starts from 'Date' or 'DATE'
+    header_line_idx = next((i for i, l in enumerate(lines) if re.match(r'#?\s*Date', l, re.IGNORECASE)), None)
+    if header_line_idx is None:
+        raise ValueError(f"Cant find header of the table in file {fname}")
+
+    # Preparing a temporary file in memory for genfromtxt
+    clean_lines = []
+    for line in lines[header_line_idx:]:
+        clean_lines.append(line.lstrip('#').strip())
+
+    # Create structured array
     from io import StringIO
-    data_text = '\n'.join(table_lines[1:])
-    # Use genfromtxt with names=colnames
-    try:
-        data = np.genfromtxt(StringIO(data_text), dtype=None, names=colnames, encoding='utf-8')
-    except Exception:
-        # fallback: read as float columns and build recarray
-        data = np.genfromtxt(StringIO(data_text), names=colnames, dtype=None, encoding='utf-8')
+    buffer = StringIO('\n'.join(clean_lines))
 
-    return header, data
+    data = np.genfromtxt(
+        buffer,
+        names=True,
+        dtype=None,
+        encoding='utf-8',
+        delimiter=None,  # any number of spaces
+        autostrip=True
+    )
+
+    return data
 
 
-# --------------------- Utility: parse date/time & compute mid/JD ---------------------
-def make_utc_strings_and_mid_jd(date_str: str, time_str: str, dt_seconds: float) -> Tuple[str, str, float]:
-    """Given date 'YYYY-MM-DD' and time 'HH:MM:SS.sss', return UTC_begin_str, UTC_end_str (both ISO like yyyy-mm-ddThh:mm:ss.sss) and JD_mid (float).
+# === Converting Az/El → RA/DEC === #
+def azel_to_radec(az, el, obstime, location):
+    altaz = AltAz(az=az*u.deg, alt=el*u.deg, obstime=obstime, location=location)
+    sky = SkyCoord(altaz)
+    return sky.icrs.ra.deg, sky.icrs.dec.deg
 
-    Note: we keep 6 fractional seconds digits (microseconds) where available.
+
+# === Calculating Sun phase angle === #
+def compute_solar_phase_angle(obs_coord, sun_coord):
+    return obs_coord.separation(sun_coord).deg
+
+
+# ---- Helper function for searching columns by "fuzzy" name ----
+def find_column_by_token(names, token):
     """
-    # Try to parse time with optional fractional seconds
-    iso_in = f"{date_str} {time_str}"
-    # Some files may have 3 or 6 fractional digits; use astropy Time for reliable JD
-    t_start = Time(iso_in, format='iso', scale='utc')
-    t_end = Time(t_start.jd + (dt_seconds / 86400.0), format='jd', scale='utc')
-    t_mid = Time((t_start.jd + t_end.jd) / 2.0, format='jd', scale='utc')
-
-    # Format strings to 23 chars like 'yyyy-mm-ddThh:mm:ss.sss' (keep microseconds up to 6 digits)
-    utc_begin = t_start.iso.replace(' ', 'T')[:23]
-    utc_end = t_end.iso.replace(' ', 'T')[:23]
-    jd_mid = t_mid.jd
-    return utc_begin, utc_end, jd_mid
-
-
-# --------------------- Compute RA/DEC from Az/El ---------------------
-def azel_to_radec(az_deg: float, el_deg: float, obs_time: Time, site_lat: float, site_lon: float, site_elev_m: float) -> Tuple[float, float]:
-    """Convert Az/El (deg) in local horizon frame to ICRS RA/Dec (deg) for given observer and time.
-
-    Returns (ra_deg, dec_deg).
+    names: iterable of column names (as returned by numpy recarray.dtype.names)
+    token: normalized token, e.g. 'az', 'el', 'rg', 'date', 'ut', 'mag'
+    returns: original name if found, else None
     """
-    location = EarthLocation(lat=site_lat * u.deg, lon=site_lon * u.deg, height=site_elev_m * u.m)
-    altaz = AltAz(obstime=obs_time, location=location)
-    sc = SkyCoord(az=az_deg * u.deg, alt=el_deg * u.deg, frame=altaz)
-    icrs = sc.transform_to('icrs')
-    return float(icrs.ra.degree), float(icrs.dec.degree)
+    norm_map = {n: re.sub(r'[^0-9a-z]', '', n.lower()) for n in names}
+    # 1) точний старт
+    for orig, norm in norm_map.items():
+        if norm.startswith(token):
+            return orig
+    # 2) містить
+    for orig, norm in norm_map.items():
+        if token in norm:
+            # avoid matching 'mag_err' when token == 'mag' (we'll check separately)
+            return orig
+    return None
 
 
-# --------------------- Build EOSSA structured array ---------------------
-def build_eossa_array(header: Dict[str, str], data_rows: np.ndarray) -> np.ndarray:
-    """Create a NumPy structured array conforming to the required EOSSA ground-based columns (K-2).
+def convert_to_fits(input_file):
+    print(f"→ Processing: {os.path.basename(input_file)}")
 
-    header: parsed header dict (should contain SITE_LAT, SITE_LON, SITE_ELEV, dt, NORAD, NAME, etc.)
-    data_rows: numpy.recarray with columns from file (expected: Date, UT, Az(deg), El(deg), Rg(Mm), magB or mag etc.)
-    """
-    n = len(data_rows)
-    # Build dtype dynamically to include vector 2D where required
-    dtype_list = []
-    for name, fmt in EOSSA_COLUMNS:
-        if isinstance(fmt, tuple):
-            # ("f8", 2)
-            dtype_list.append((name, np.float64, fmt[1]))
-        else:
-            dtype_list.append((name, np.float64 if fmt == 'f8' else (np.int32 if fmt == 'i4' else 'U23')))
+    header = read_header_to_dict(input_file)
+    data = read_data(input_file)  # numpy recarray
 
-    # But we want exact types: override mapping
-    # Let's explicitly define dtype according to EOSSA_COLUMNS
-    dtype = np.dtype([
-        ('UTC_Begin_exp', 'U23'),
-        ('UTC_End_exp', 'U23'),
-        ('JD_Mid_Exp', np.float64),
-        ('Exp_Duration', np.float64),
-        ('Cur_Spec_Filt_Num', np.int32),
-        ('Cur_ND_Filt_Num', np.int32),
-        ('Mag_Exo_Atm', np.float64),
-        ('Mag_Exo_Atm_Unc', np.float64),
-        ('Mag_Range_Norm', np.float64),
-        ('Eph_RA_DE', np.float64, (2,)),
-        ('Met_RA_DE', np.float64, (2,)),
-        ('Eph_AZ_EL', np.float64, (2,)),
-        ('Met_AZ_EL', np.float64, (2,)),
-        ('Sun_AZ_EL', np.float64, (2,)),
-        ('Tel_Obj_Range', np.float64),
-        ('Solar_Disk_Frac', np.float64),
-    ])
+    # Read filter from header of extension of the phX file
+    filt = header.get('FILTER')
+    if not filt:
+        filt = os.path.splitext(input_file)[1][-1].upper()
 
-    out = np.empty(n, dtype=dtype)
-
-    # Observer location
-    try:
-        site_lat = float(header.get('SITE_LAT', header.get('TELLAT', '0')))
-        site_lon = float(header.get('SITE_LON', header.get('TELLONG', '0')))
-        site_elev = float(header.get('SITE_ELEV', header.get('TELALT', '0')))
-    except Exception:
-        site_lat = 0.0
-        site_lon = 0.0
-        site_elev = 0.0
-
-    # exposure dt
-    try:
-        dt_val = float(header.get('dt', header.get('DT', header.get('Exp_Duration', 0.0))))
-    except Exception:
-        dt_val = 0.0
-
-    # filter (from filename extension .phX)
-    filt = None
-    m = re.search(r"\.ph([A-Za-z0-9])$", os.path.basename(header.get('FILENAME', '')))
-    if m:
-        filt = m.group(1)
-    # default spec filter index
-    cur_spec_filt_num = 1
-
-    # parse Rg column name possibilities
-    rg_name = None
-    for cand in ['Rg(Mm)', 'Rg', 'Rg_Mm', 'Rg(Mm)']:
-        if cand in data_rows.dtype.names:
-            rg_name = cand
+    names = list(data.dtype.names)
+    # find mag col: any col that starts from 'mag' but not ends on 'err'
+    mag_col = None
+    for n in names:
+        nl = n.lower()
+        if nl.startswith('mag') and not nl.endswith('err'):
+            mag_col = n
             break
-    # parse az/el names
-    az_name = next((c for c in data_rows.dtype.names if 'Az' in c), None)
-    el_name = next((c for c in data_rows.dtype.names if 'El' in c or 'el' in c), None)
-    # parse mag name
-    mag_name = next((c for c in data_rows.dtype.names if re.search(r"mag", c, flags=re.I)), None)
-    mag_err_name = next((c for c in data_rows.dtype.names if re.search(r"mag_err|magerr|mag_err", c, flags=re.I)), None)
+    if mag_col is None:
+        # as a fallback, let's try to find columns containing 'mag' but not 'err'
+        for n in names:
+            nl = re.sub(r'[^0-9a-z]', '', n.lower())
+            if 'mag' in nl and not nl.endswith('err'):
+                mag_col = n
+                break
 
-    # date/time names (common: Date and UT)
-    date_col = next((c for c in data_rows.dtype.names if re.match(r'Date', c, flags=re.I)), None)
-    time_col = next((c for c in data_rows.dtype.names if re.match(r'UT|Time', c, flags=re.I)), None)
+    if mag_col is None:
+        raise ValueError("Cannot find eny column of magnitude (mag*). Available cols: " + ", ".join(names))
 
-    # If data_rows[time_col] contains microseconds in different format, astropy Time still parses
+    # find date / time
+    date_col = find_column_by_token(names, 'date')
+    time_col = find_column_by_token(names, 'ut') or find_column_by_token(names, 'time')
 
-    for i in range(n):
-        row = data_rows[i]
-        date_str = str(row[date_col]) if date_col else ''
-        time_str = str(row[time_col]) if time_col else ''
-        # build begin/end/jd
-        if date_str and time_str:
+    if date_col is None or time_col is None:
+        raise ValueError(f"Не знайдено колонки дати/часу. Доступні: {', '.join(names)}")
+
+    # find az/el/rg
+    az_col = find_column_by_token(names, 'az')
+    el_col = find_column_by_token(names, 'el')
+    rg_col = find_column_by_token(names, 'rg') or find_column_by_token(names, 'range')
+
+    if az_col is None or el_col is None:
+        raise ValueError(f"Не знайдено колонок az/el. Доступні: {', '.join(names)}")
+
+    if rg_col is None:
+        # Rg can be marked differently; we will put NaN, but it is better to warn
+        print("[Warning] Cant find range loc (Rg). Tel_Obj_Range will be filled with NaN.")
+
+    # Now we take the arrays from data by the found names
+    mag_norm = data[mag_col]
+    date_strs = data[date_col]
+    time_strs = data[time_col]
+    az = data[az_col].astype(float)
+    el = data[el_col].astype(float)
+    dist_m = np.array(
+        [float(x) if rg_col and x != '' else np.nan for x in (data[rg_col] if rg_col else [np.nan] * len(data))])
+    if rg_col:
+        # If Rg is in Mm should convert it to meters
+        # let's try to guess: if the value of the order 1000..2000 is Mm
+        # If the values are large (>=1e5) — these are meters -> we don't multiply
+        sample = dist_m[~np.isnan(dist_m)]
+        if sample.size > 0:
+            median = np.median(sample)
+            if median < 1e5:  # most likely it is Mm
+                dist_m = dist_m * 1e6
+    # Time: reliably parse strings with fractional seconds
+    utc_times = []
+    for d, t in zip(date_strs, time_strs):
+        s = f"{d} {t}"
+        # some files may have microseconds truncated; try multiple formats
+        tried = False
+        for fmt in ('%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d %H:%M:%S'):
             try:
-                utc_begin, utc_end, jd_mid = make_utc_strings_and_mid_jd(date_str, time_str, dt_val)
+                dtobj = datetime.strptime(s, fmt)
+                utc_times.append(dtobj)
+                tried = True
+                break
             except Exception:
-                # fallback: try without fractional parts
-                t_iso = f"{date_str} {time_str}"
-                t0 = Time(t_iso, format='iso', scale='utc')
-                t_end = Time(t0.jd + (dt_val / 86400.0), format='jd', scale='utc')
-                t_mid = Time((t0.jd + t_end.jd) / 2.0, format='jd', scale='utc')
-                utc_begin = t0.iso.replace(' ', 'T')[:23]
-                utc_end = t_end.iso.replace(' ', 'T')[:23]
-                jd_mid = t_mid.jd
-        else:
-            utc_begin = ''
-            utc_end = ''
-            jd_mid = np.nan
+                continue
+        if not tried:
+            # last resort: use astropy to parse
+            try:
+                utc_times.append(Time(s).to_datetime())
+            except Exception:
+                raise ValueError(f"Unable to parse date/time string: '{s}'")
+    obstimes = Time(utc_times, scale='utc')
 
-        out['UTC_Begin_exp'][i] = utc_begin
-        out['UTC_End_exp'][i] = utc_end
-        out['JD_Mid_Exp'][i] = jd_mid
-        out['Exp_Duration'][i] = dt_val
-        out['Cur_Spec_Filt_Num'][i] = cur_spec_filt_num
-        out['Cur_ND_Filt_Num'][i] = PLACEHOLDER_INT
+    # RA/DEC
+    location = EarthLocation(lat=float(header.get('SITE_LAT', 0)) * u.deg,
+                             lon=float(header.get('SITE_LON', 0)) * u.deg,
+                             height=float(header.get('SITE_ELEV', 0)) * u.m)
+    ra, dec = azel_to_radec(az, el, obstimes, location)
 
-        # magnitude and range
-        mag_val = float(row[mag_name]) if mag_name and row[mag_name] != '' else np.nan
-        mag_unc = float(row[mag_err_name]) if mag_err_name and row[mag_err_name] != '' else np.nan
-        rg_mm = float(row[rg_name]) if rg_name and row[rg_name] != '' else np.nan
+    # Mag_Exo_Atm (reduction to ephemeris distance)
+    # if dist_m NaN -> Mag_Exo_Atm = NaN
+    mag_exo = np.array([m + 5.0 * np.log10(d / 1e3 / DISTANCE_NORM_KM) if np.isfinite(d) and d > 0 else np.nan
+                        for m, d in zip(mag_norm, dist_m)])
 
-        # Range-normalized magnitude (1000 km) per doc: Mag_Range_Norm = mag + 5*log10(d_km / 1000)
-        # since d_km = rg_mm * 1000 => d_km/1000 = rg_mm
-        if np.isfinite(mag_val) and np.isfinite(rg_mm) and rg_mm > 0:
-            mag_range_norm = mag_val + 5.0 * math.log10(rg_mm)
-        else:
-            mag_range_norm = np.nan
+    # Sun, phase angle
+    sun_coords = get_sun(obstimes)
+    obs_coords = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
+    solar_phase = compute_solar_phase_angle(obs_coords, sun_coords)
 
-        # Mag_Exo_Atm: without atmospheric correction available, set equal to Mag_Range_Norm
-        mag_exo_atm = mag_range_norm
+    # Formation of the FITS table
+    dt = float(header['DT'])
+    cols = [
+        fits.Column(name='UTC_Begin_exp', format='23A', array=[t.iso.replace(' ', 'T') for t in obstimes]),
+        fits.Column(name='UTC_End_exp', format='23A', array=[(t + dt*u.s).iso.replace(' ', 'T') for t in obstimes]),
+        fits.Column(name='JD_Mid_Exp', format='D', array=obstimes.jd + dt/(2*86400.0)),
+        fits.Column(name='Exp_Duration', format='D', array=[dt]*len(obstimes)),
+        fits.Column(name='Cur_Spec_Filt_Num', format='J', array=[1]*len(obstimes)),
+        fits.Column(name='Cur_ND_Filt_Num', format='J', array=[PLACEHOLDER_INT]*len(obstimes)),
+        fits.Column(name='Mag_Exo_Atm', format='D', array=mag_exo),
+        fits.Column(name='Mag_Range_Norm', format='D', array=mag_norm),
+        fits.Column(name='Tel_Obj_Range', format='D', array=dist_m),
+        fits.Column(name='Eph_RA_DE', format='2D', array=np.column_stack((ra, dec))),
+        fits.Column(name='Met_RA_DE', format='2D', array=np.column_stack((ra, dec))),
+        fits.Column(name='Eph_Az_El', format='2D', array=np.column_stack((az, el))),
+        fits.Column(name='Met_Az_El', format='2D', array=np.column_stack((az, el))),
+        fits.Column(name='Solar_Phase_Ang', format='D', array=solar_phase)
+    ]
 
-        out['Mag_Exo_Atm'][i] = mag_exo_atm if np.isfinite(mag_exo_atm) else PLACEHOLDER_FLOAT
-        out['Mag_Exo_Atm_Unc'][i] = mag_unc if np.isfinite(mag_unc) else PLACEHOLDER_FLOAT
-        out['Mag_Range_Norm'][i] = mag_range_norm if np.isfinite(mag_range_norm) else PLACEHOLDER_FLOAT
+    hdu = fits.BinTableHDU.from_columns(cols)
 
-        # Az/El
-        az = float(row[az_name]) if az_name and row[az_name] != '' else np.nan
-        el = float(row[el_name]) if el_name and row[el_name] != '' else np.nan
-        out['Eph_AZ_EL'][i, 0] = az if np.isfinite(az) else PLACEHOLDER_FLOAT
-        out['Eph_AZ_EL'][i, 1] = el if np.isfinite(el) else PLACEHOLDER_FLOAT
-        out['Met_AZ_EL'][i, 0] = out['Eph_AZ_EL'][i, 0]
-        out['Met_AZ_EL'][i, 1] = out['Eph_AZ_EL'][i, 1]
+    # Primary Header
+    phdr = fits.Header()
+    phdr['SIMPLE'] = (True, 'FITS standard')
+    phdr['BITPIX'] = (8, 'bits per data pixel')
+    phdr['NAXIS'] = (0, 'no image data')
+    phdr['EXTEND'] = (True, 'extensions are possible')
+    phdr['CLASSIF'] = ('UNCLASS', 'Security classification level')
+    phdr['EOSSAVER'] = ('3.1.1', 'EOSSA data standard version')
+    phdr['OBSEPH'] = ('GROUND', 'Observation ephemeris source')
+    phdr['FILTER'] = (filt, 'Observation filter')
+    phdr['OBJECT'] = (header.get('NAME', 'Unknown'), 'Observed object')
+    phdr['NORAD'] = (header.get('NORAD', 'Unknown'), 'NORAD ID')
 
-        # Tel_Obj_Range (meters)
-        out['Tel_Obj_Range'][i] = rg_mm * 1e6 if np.isfinite(rg_mm) else np.nan
+    primary_hdu = fits.PrimaryHDU(header=phdr)
 
-        # Compute RA/DEC from Az/El (use mid-exposure time)
-        try:
-            obs_time = Time(out['JD_Mid_Exp'][i], format='jd', scale='utc')
-            ra_deg, dec_deg = azel_to_radec(az, el, obs_time, site_lat, site_lon, site_elev)
-            out['Eph_RA_DE'][i, 0] = ra_deg
-            out['Eph_RA_DE'][i, 1] = dec_deg
-            out['Met_RA_DE'][i, 0] = ra_deg
-            out['Met_RA_DE'][i, 1] = dec_deg
-        except Exception:
-            out['Eph_RA_DE'][i, :] = PLACEHOLDER_FLOAT
-            out['Met_RA_DE'][i, :] = PLACEHOLDER_FLOAT
+    # Output path
+    wd = os.path.dirname(input_file)
+    fname = os.path.splitext(os.path.basename(input_file))[0]
+    eossa_path = os.path.join(wd, fname + '.eossa.fits')
 
-        # Sun AZ/EL at mid time
-        try:
-            tmid = Time(out['JD_Mid_Exp'][i], format='jd', scale='utc')
-            location = EarthLocation(lat=site_lat * u.deg, lon=site_lon * u.deg, height=site_elev * u.m)
-            sun = get_sun(tmid)
-            sun_altaz = sun.transform_to(AltAz(obstime=tmid, location=location))
-            sun_az = float(sun_altaz.az.deg)
-            sun_alt = float(sun_altaz.alt.deg)
-            out['Sun_AZ_EL'][i, 0] = sun_az
-            out['Sun_AZ_EL'][i, 1] = sun_alt
-            # estimate solar disk fraction visible above horizon (simple linear approx):
-            r = SOLAR_ANGULAR_RADIUS_DEG
-            frac = (sun_alt + r) / (2.0 * r)
-            frac = max(0.0, min(1.0, frac))
-            out['Solar_Disk_Frac'][i] = frac
-        except Exception:
-            out['Sun_AZ_EL'][i, :] = PLACEHOLDER_FLOAT
-            out['Solar_Disk_Frac'][i] = PLACEHOLDER_FLOAT
+    # Writing file
+    hdul = fits.HDUList([primary_hdu, hdu])
+    hdul.writeto(eossa_path, overwrite=True)
 
-    return out
+    print(f"✓ Created: {os.path.basename(eossa_path)}")
 
 
-# --------------------- Write FITS ---------------------
-def write_eossa_fits(out_path: str, header_meta: Dict[str, Any], eossa_array: np.ndarray):
-    """Write primary header + EOSSA binary table to out_path (overwrite).
-
-    header_meta: dictionary possibly containing TELESCOP, SITE_LAT, SITE_LON, SITE_ELEV, NORAD, NAME, etc.
-    eossa_array: structured array matching EOSSA dtype
-    """
-    # Primary HDU
-    prihdr = fits.Header()
-    prihdr['SIMPLE'] = (True, 'standard FITS')
-    prihdr['BITPIX'] = (8, 'bytes')
-    prihdr['NAXIS'] = (0, 'no image')
-    prihdr['EXTEND'] = (True, 'extensions follow')
-    prihdu = fits.PrimaryHDU(header=prihdr)
-
-    # Table HDU
-    bintab = fits.BinTableHDU(data=eossa_array)
-
-    # Fill required EOSSA header keywords for ground-based (Appendix K table K-1)
-    # Use defaults if missing
-    bintab.header['EXTNAME'] = os.path.basename(out_path)
-    bintab.header['CLASSIF'] = header_meta.get('CLASSIF', CLASSIF_VALUE)
-    bintab.header['VERS'] = EOSSA_VERSION
-    bintab.header['OBSEPH'] = header_meta.get('OBSEPH', 'GROUND')
-    bintab.header['TELESCOP'] = header_meta.get('SITE_NAME', header_meta.get('TELESCOP', 'UNKNOWN'))
-    # lat/lon/elev
-    try:
-        bintab.header['TELLAT'] = float(header_meta.get('SITE_LAT', header_meta.get('TELLAT', 0.0)))
-        bintab.header['TELLONG'] = float(header_meta.get('SITE_LON', header_meta.get('TELLONG', 0.0)))
-        bintab.header['TELALT'] = float(header_meta.get('SITE_ELEV', header_meta.get('TELALT', 0.0)))
-    except Exception:
-        pass
-
-    bintab.header['OBSNAME'] = header_meta.get('SITE_NAME', '')
-    bintab.header['OBJEPH'] = header_meta.get('OBJEPH', 'TLE')
-    bintab.header['OBJTYPE'] = header_meta.get('OBJTYPE', 'SCN')
-    if 'NORAD' in header_meta:
-        try:
-            bintab.header['OBJNUM'] = int(header_meta['NORAD'])
-        except Exception:
-            bintab.header['OBJNUM'] = header_meta['NORAD']
-    bintab.header['OBJECT'] = header_meta.get('NAME', header_meta.get('OBJECT', ''))
-
-    # Add TLE lines if available
-    if 'TLE_LINE0' in header_meta and 'TLE_LINE1' in header_meta:
-        bintab.header['TLELN1'] = header_meta.get('TLE_LINE1', '')
-        bintab.header['TLELN2'] = header_meta.get('TLE_LINE2', '')
-
-    hdul = fits.HDUList([prihdu, bintab])
-    hdul.writeto(out_path, overwrite=True)
-    return out_path
-
-
-# --------------------- High-level converter ---------------------
-def convert_phx_to_eossa(phx_path: str, out_fits: str | None = None) -> str:
-    if out_fits is None:
-        base = os.path.splitext(os.path.basename(phx_path))[0]
-        out_fits = base + '.eossa.fits'
-
-    header, data = read_phx_file(phx_path)
-    # add filename to header so build_eossa_array can see it if needed
-    header['FILENAME'] = os.path.basename(phx_path)
-
-    eossa_array = build_eossa_array(header, data)
-    write_eossa_fits(out_fits, header, eossa_array)
-    print(f"Wrote EOSSA file: {out_fits}")
-    return out_fits
-
-
-# --------------------- CLI ---------------------
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Convert .phX photometry file to EOSSA v3.1.1 FITS (binary table)')
-    parser.add_argument('input', help='Input .phX file (or directory)')
-    parser.add_argument('-o', '--out', help='Output FITS file (or directory for many)', default=None)
+# === CLI === #
+def main():
+    parser = argparse.ArgumentParser(description='Конвертер EOSSA v3.1.1 для .phX файлів')
+    parser.add_argument('input', nargs='+', help='Вхідні файли або шаблон (*.ph*)')
     args = parser.parse_args()
 
-    inp = args.input
-    out = args.out
-    if os.path.isdir(inp):
-        # process all .ph* files
-        files = [os.path.join(inp, f) for f in os.listdir(inp) if re.match(r'.*\.ph.', f)]
-        out_dir = out or inp
-        for f in files:
-            base = os.path.splitext(os.path.basename(f))[0]
-            out_path = os.path.join(out_dir, base + '.eossa.fits')
-            convert_phx_to_eossa(f, out_path)
-    else:
-        out_path = out
-        convert_phx_to_eossa(inp, out_path)
+    all_files = []
+    for pattern in args.input:
+        if any(ch in pattern for ch in ['*', '?']):
+            matched = glob.glob(pattern)
+            all_files.extend(matched)
+        elif os.path.isfile(pattern):
+            all_files.append(pattern)
+
+    if not all_files:
+        print("[!] No files found to process.")
+        sys.exit(1)
+
+    print(f"→ Found {len(all_files)} files to process.\n")
+
+    for file in all_files:
+        try:
+            convert_to_fits(file)
+        except Exception as e:
+            print(f"[Error] {os.path.basename(file)}: {e}")
+
+    print("\nDone ✅")
+
+
+if __name__ == '__main__':
+    main()
