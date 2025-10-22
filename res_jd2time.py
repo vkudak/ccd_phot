@@ -51,7 +51,8 @@ def save_ut_data(filename_ut, header,
 
 
 if __name__ == "__main__":
-    filename = sys.argv[1]
+    # filename = sys.argv[1]
+    filename = " ".join(sys.argv[1:]).strip('"')
 
     if os.path.isfile(filename):
         filelist = [filename]
@@ -59,7 +60,7 @@ if __name__ == "__main__":
         # we got path with mask
         filelist = glob.glob(filename)
 
-    
+
     for filename in filelist:
         wd = os.path.dirname(filename)
         base = os.path.basename(filename)
