@@ -695,6 +695,11 @@ def read_config_sat(conf_file):
             time_format = config.get('STD', 'Time_format', fallback="UT")
             res['time_format'] = time_format.strip()
 
+            res['header_time'] = config.get('STD', 'header_time', fallback="DATE-OBS")
+            res['time_moment'] = config.get('STD', 'time_moment', fallback="start")
+            if res['time_moment'] not in ['start', 'end', 'middle']:
+                res['time_moment'] = 'start'  # fallback if there is a bullshit in config
+
             res['min_real_mag'] = config.getfloat('STD', 'min_real_mag', fallback=15.0)
             res['max_center_error'] = config.getfloat('STD', 'max_center_err', fallback=2.0)
             res['fits_sort'] = config.get('STD', 'fits_sort', fallback='None')

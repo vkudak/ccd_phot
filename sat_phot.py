@@ -96,9 +96,15 @@ if start_file is not None and start_file in fl:
 
 # get TIME from first FIT file
 header = fits.getheader(path + "//" + fl[0])
-date_time = header.get('DATE-OBS')
-if date_time == '0001-01-01T00:00:00.0000000':
-    date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
+time_key = conf['header_time']
+if time_key in header:
+    date_time = header.get(time_key)
+else: # fall back to standard keyword and hope it exists
+    date_time = header.get('DATE-OBS')
+    if date_time == '0001-01-01T00:00:00.0000000':
+        # TODO: check what happens if there are no valid GPS time in header. End_time is bad idea
+        date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
+
 ut1 = date_time.split("T")[1]
 ut1 = ut1[:2] + ut1[3:5] + ut1[6:8]
 ymd = date_time.split("T")[0]
@@ -125,7 +131,10 @@ for fit_file in fl:
     data = fits.getdata(path + "//" + fit_file)
     header = fits.getheader(path + "//" + fit_file)
 
-    date_time = header.get('DATE-OBS')
+    if time_key in header:
+        date_time = header.get(time_key)
+    else:  # fall back to standard keyword and hope it exists
+        date_time = header.get('DATE-OBS')
     exp = header.get('EXPTIME')
     exp = float(exp)
     if date_time == '0001-01-01T00:00:00.0000000':
@@ -134,11 +143,20 @@ for fit_file in fl:
     # Fix sec=60
     date_time = fix_datetime(date_time)
 
-    # correction DATE_TIME, datetime = datetime + exp / 2
-    date_time = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
-    date_time = date_time + timedelta(seconds=float(exp/2.0))
-    # and back to STR
-    date_time = date_time.strftime("%Y-%m-%dT%H:%M:%S.%f0")
+    if conf['time_moment'] == 'start':
+        # correction DATE_TIME, datetime = datetime + exp / 2
+        date_time = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
+        date_time = date_time + timedelta(seconds=float(exp/2.0))
+        # and back to STR
+        date_time = date_time.strftime("%Y-%m-%dT%H:%M:%S.%f0")
+    elif conf['time_moment'] == 'end':
+        # correction DATE_TIME, datetime = datetime - exp / 2
+        date_time = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
+        date_time = date_time - timedelta(seconds=float(exp/2.0))
+        # and back to STR
+        date_time = date_time.strftime("%Y-%m-%dT%H:%M:%S.%f0")
+    # nothing to do if 'middle', leave date_time as is
+
 
     width = int(header.get('NAXIS1'))
     height = int(header.get('NAXIS2'))
