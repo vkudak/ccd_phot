@@ -51,7 +51,8 @@ def save_jd_data(filename_jd, header,
 
 
 if __name__ == "__main__":
-    filename = sys.argv[1]
+    # filename = sys.argv[1]
+    filename = " ".join(sys.argv[1:]).strip('"')
 
     if os.path.isfile(filename):
         filelist = [filename]

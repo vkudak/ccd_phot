@@ -262,8 +262,8 @@ for fit_file in fl:
         # print (phot_table)
 
         Az, El = get_star_el(star_name=conf['star_name'],
-                         obs_lat=conf['site_lat'], obs_lon=conf['site_lon'], obs_elev=conf['site_elev'],
-                         obs_date=date_time)
+                             obs_lat=conf['site_lat'], obs_lon=conf['site_lon'], obs_elev=conf['site_elev'],
+                             obs_date=date_time)
         if El < 5:
             print("WARNING! Elevation of satellite < 5 deg. Check settings!")
         mag = calc_mag(flux, El, 1000, conf['A'], conf['k'], exp, min_mag=conf['min_real_mag'])
