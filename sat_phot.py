@@ -217,7 +217,7 @@ for fit_file in fl:
 
         if t_x is None:
             print("\nNo target info in the HEADER of the first FIT file. Trying to search with DAOFind ...")
-            t_x, t_y = obj_finder_dao(data[5:, :])
+            t_x, t_y = obj_finder_dao(data[15:-15, :])   # cut 15 pix up and down
             if t_x and t_y is not None:
                 t_y = t_y + 5
                 print(f"Object detected at X = {t_x:5.2f} Y = {t_y:5.2f}  OK.  ", end="")
