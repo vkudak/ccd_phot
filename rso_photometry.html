@@ -1,0 +1,539 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Photometry of RSO &#8212; ccd_phot 1.0.3 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/no-superscript-citations.css?v=32f38b18" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/jquery.js?v=5d32c60e"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+    <script src="_static/documentation_options.js?v=baaebd52"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'rso_photometry';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Photometry system calibration" href="sys_calibration.html" />
+    <link rel="prev" title="How to start scripts" href="start_scripts.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ccd_phot 1.0.3 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="start_scripts.html">
+    How to start scripts
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Photometry of RSO
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="sys_calibration.html">
+    Photometry system calibration
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="additional_scripts.html">
+    Additional scripts
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="start_scripts.html">
+    How to start scripts
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Photometry of RSO
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="sys_calibration.html">
+    Photometry system calibration
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="additional_scripts.html">
+    Additional scripts
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Photometry of RSO</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="photometry-of-rso">
+<h1>Photometry of RSO<a class="headerlink" href="#photometry-of-rso" title="Link to this heading">#</a></h1>
+<section id="prepare-fits-files">
+<h2>Prepare FITS files<a class="headerlink" href="#prepare-fits-files" title="Link to this heading">#</a></h2>
+<p>Your RSO photometry FITS files should be in some directory.
+They should be named in order of creation, otherwise the script will lose the target
+In this case use <code class="docutils literal notranslate"><span class="pre">fits_sort</span></code> option in <code class="docutils literal notranslate"><span class="pre">config_sat.ini</span></code> file to sort the FITS files, see <a class="reference internal" href="#sat-config-label"><span class="std std-ref">Prepare sat_config file</span></a>.</p>
+<p>Avoid names like <code class="docutils literal notranslate"><span class="pre">file_1.fits</span></code>, <code class="docutils literal notranslate"><span class="pre">file_10.fits</span></code>, etc. Preferred name patters is <code class="docutils literal notranslate"><span class="pre">{date_folder}/{norad_folder}/{norad}_{HHMMSS</span> <span class="pre">of</span> <span class="pre">start}_{count}.fits</span></code></p>
+<p>Or simply use: <code class="docutils literal notranslate"><span class="pre">file_00001.fits</span></code>, <code class="docutils literal notranslate"><span class="pre">file_00002.fits</span></code> and so on.</p>
+<p>FITS files do not need to contain WCS solution, <code class="docutils literal notranslate"><span class="pre">sat_phot.py</span></code> script do not use it at all.</p>
+<p>Starting from ver 1.0.1 <code class="docutils literal notranslate"><span class="pre">sat_phot.py</span></code> script can try to find object automatically on the first FITS file.
+If script fails than you need to add additional keywords to the first FITS file header
+<code class="docutils literal notranslate"><span class="pre">OBJX:</span> <span class="pre">&lt;float&gt;</span></code> &amp; <code class="docutils literal notranslate"><span class="pre">OBJY:</span> <span class="pre">&lt;float&gt;</span></code> to tell the script where the target initially is situated on the frame.</p>
+</section>
+<section id="prepare-sat-config-file">
+<span id="sat-config-label"></span><h2>Prepare sat_config file<a class="headerlink" href="#prepare-sat-config-file" title="Link to this heading">#</a></h2>
+<p>Example of <code class="docutils literal notranslate"><span class="pre">sat_config.ini</span></code> file can be found in project root directory.
+Photometry script will try to find <code class="docutils literal notranslate"><span class="pre">config_sat.ini</span></code> in working DIR or some other INI file that will be read as config file.
+Config file has few sections (see below).</p>
+<p>Most important section is STD section.
+Here you should set the system zero-point &amp; coefficient of extinction. Can be obtained in the process of system calibration
+(see <a class="reference internal" href="sys_calibration.html#sys-calibration-label"><span class="std std-ref">Photometry system calibration</span></a>).
+Filter (band) and all other parameters are optional.</p>
+<p>You can sort your FITS files according to some KEY from FITS headers, if there is some filename issues.</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="k">[NAME]</span>
+<span class="na">NORAD</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">43657</span>
+<span class="na">COSPAR</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">18082A</span>
+<span class="na">NAME</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">COSMOS-2528</span>
+
+<span class="k">[TLE]</span>
+<span class="na">tle_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">D:\Share\TPL-programs\WEB2\TLE\tle_2022_03_05.txt</span>
+
+<span class="k">[STD]</span>
+<span class="na">A</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">14.5</span><span class="w">                </span><span class="c1"># System zero-point</span>
+<span class="na">k</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">0.1</span><span class="w">                 </span><span class="c1"># coefficient of extinction in selected filter</span>
+<span class="na">gate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">10</span><span class="w">               </span><span class="c1"># Window to search the object (in pixels)</span>
+<span class="na">Filter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">R</span><span class="w">              </span><span class="c1"># Filter name</span>
+<span class="na">Time_format</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">UT</span><span class="w">        </span><span class="c1"># UT/JD optional parameter, default value = UT</span>
+<span class="na">min_real_mag</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">15</span><span class="w">       </span><span class="c1"># Min mag that can be obtained on photometry system</span>
+<span class="na">max_center_err</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">2.0</span><span class="w">    </span><span class="c1"># Maximum allowed error in center definition</span>
+<span class="na">fits_sort</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">DATE-OBS</span><span class="w">    </span><span class="c1"># Header field to sort files by (without quotes). Default sorted by FITS name, without this option at all or set None.</span>
+<span class="na">header_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">DATE-OBS</span><span class="w">  </span><span class="c1"># Keyword to obtain time from FITS header</span>
+<span class="na">time_moment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">start</span><span class="w">     </span><span class="c1"># &#39;start&#39; &#39;end&#39; or &#39;middle&#39; of exposure</span>
+
+<span class="k">[APERTURE]</span>
+<span class="na">ap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">8</span>
+<span class="na">an_in</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">12</span>
+<span class="na">an_out</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">16</span>
+<span class="na">saturated</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">False</span><span class="w">       </span><span class="c1"># reject saturated data ? Default is False</span>
+
+<span class="k">[PLOT]</span>
+<span class="na">plot_errors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">False</span><span class="w">     </span><span class="c1"># Plot errors with ccd_plot.py script</span>
+<span class="na">auto_plot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">True</span><span class="w">        </span><span class="c1"># Plot graphs when result is ready</span>
+<span class="na">python</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">python3</span><span class="w">        </span><span class="c1"># python3, python38, or something else</span>
+<span class="na">plot_command</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">/path_to_file/ccd_plot.py</span><span class="w"> </span><span class="c1"># abspath to ccd_plot.py</span>
+
+<span class="k">[SITE]</span>
+<span class="na">Name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">Derenivka</span>
+<span class="na">lat</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">48.5635505</span>
+<span class="na">lon</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">22.453751</span>
+<span class="na">h</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">231.1325</span>
+</pre></div>
+</div>
+<p>In general <code class="docutils literal notranslate"><span class="pre">sat_phot.py</span></code> has few options:</p>
+<ul class="simple">
+<li><p><strong>[path]</strong>               Path to FITS files [<strong>REQUIRED</strong>]</p></li>
+<li><p><strong>[-c or - - config ]</strong>    Specify config file [Optional]</p></li>
+<li><p><strong>[-s or - - start_file]</strong> Specify the name of the FITS file to start from [Optional]. Could be useful if photometry script fails in the middle of the file list. This can happen if the object is too faint. In such case you can use this option to start from required FITS. But first rename result file or it will be overwritten.</p></li>
+</ul>
+<div class="admonition-warning-for-windows-users admonition">
+<p class="admonition-title">Warning For Windows users:</p>
+<p>Try to avoid folder and file names with spaces. It can be interpreted as two or more parameters which leeds to incorrect work of the scripts</p>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="start_scripts.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">How to start scripts</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="sys_calibration.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Photometry system calibration</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prepare-fits-files">Prepare FITS files</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prepare-sat-config-file">Prepare sat_config file</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Kudak Viktor.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>

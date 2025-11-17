@@ -1,0 +1,27 @@
+/* Перевизначаємо CSS для цитат і виносок, щоб прибрати верхній індекс */
+
+/* 1. Цілі на елемент посилання, що використовує клас 'footnote-reference'
+     (той, який ви вказали).
+*/
+a.footnote-reference {
+    /* Примусово вирівнюємо посилання по базовій лінії */
+    vertical-align: baseline !important;
+    /* Примусово використовуємо звичайний розмір шрифту */
+    font-size: 100% !important;
+}
+
+/* 2. Цілі на елемент повернення 'fn-backref' (іноді він може контролювати
+     вигляд цитати в списку літератури).
+*/
+a.fn-backref {
+    vertical-align: baseline !important;
+    font-size: inherit !important;
+}
+
+/* 3. Якщо ваша тема використовує елемент <sup> для верхнього індексу,
+     хоча це рідше для Sphinx цитат:
+*/
+.citation a.reference.citation sup {
+    vertical-align: baseline !important;
+    font-size: 100% !important;
+}

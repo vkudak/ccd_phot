@@ -1,0 +1,565 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Photometry system calibration &#8212; ccd_phot 1.0.3 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  <!--
+    this give us a css class that will be invisible only if js is disabled
+  -->
+  <noscript>
+    <style>
+      .pst-js-only { display: none !important; }
+
+    </style>
+  </noscript>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8878045cc6db502f8baf" rel="stylesheet" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/no-superscript-citations.css?v=32f38b18" />
+  
+  <!-- So that users can add custom icons -->
+  <script src="_static/scripts/fontawesome.js?digest=8878045cc6db502f8baf"></script>
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf" />
+
+    <script src="_static/jquery.js?v=5d32c60e"></script>
+    <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+    <script src="_static/documentation_options.js?v=baaebd52"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'sys_calibration';</script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Additional scripts" href="additional_scripts.html" />
+    <link rel="prev" title="Photometry of RSO" href="rso_photometry.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  <meta name="docsearch:version" content="" />
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <dialog id="pst-search-dialog">
+    
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form>
+  </dialog>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+<div class="bd-header__inner bd-page-width">
+  <button class="pst-navbar-icon sidebar-toggle primary-toggle" aria-label="Site navigation">
+    <span class="fa-solid fa-bars"></span>
+  </button>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">ccd_phot 1.0.3 documentation</p>
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="start_scripts.html">
+    How to start scripts
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="rso_photometry.html">
+    Photometry of RSO
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Photometry system calibration
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="additional_scripts.html">
+    Additional scripts
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+<button class="btn search-button-field search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+ <i class="fa-solid fa-magnifying-glass"></i>
+ <span class="search-button__default-text">Search</span>
+ <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+</button>
+    </div>
+  
+
+  
+    <button class="pst-navbar-icon sidebar-toggle secondary-toggle" aria-label="On this page">
+      <span class="fa-solid fa-outdent"></span>
+    </button>
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <dialog id="pst-primary-sidebar-modal"></dialog>
+      <div id="pst-primary-sidebar" class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          
+          
+            <div class="navbar-item">
+<nav>
+  <ul class="bd-navbar-elements navbar-nav">
+    
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="installation.html">
+    Installation
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="start_scripts.html">
+    How to start scripts
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="rso_photometry.html">
+    Photometry of RSO
+  </a>
+</li>
+
+
+<li class="nav-item current active">
+  <a class="nav-link nav-internal" href="#">
+    Photometry system calibration
+  </a>
+</li>
+
+
+<li class="nav-item ">
+  <a class="nav-link nav-internal" href="additional_scripts.html">
+    Additional scripts
+  </a>
+</li>
+
+  </ul>
+</nav></div>
+          
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button pst-js-only" aria-label="Color mode" data-bs-title="Color mode"  data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <i class="theme-switch fa-solid fa-sun                fa-lg" data-mode="light" title="Light"></i>
+  <i class="theme-switch fa-solid fa-moon               fa-lg" data-mode="dark"  title="Dark"></i>
+  <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"  title="System Settings"></i>
+</button></div>
+        
+      </div>
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+<nav class="bd-docs-nav bd-links"
+     aria-label="Section Navigation">
+  <p class="bd-links__title" role="heading" aria-level="1">Section Navigation</p>
+  <div class="bd-toc-item navbar-nav"></div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+      <div class="sidebar-primary-item">
+<div id="ethical-ad-placement"
+      class="flat"
+      data-ea-publisher="readthedocs"
+      data-ea-type="readthedocs-sidebar"
+      data-ea-manual="true">
+</div></div>
+  </div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item">
+
+<nav aria-label="Breadcrumb" class="d-print-none">
+  <ul class="bd-breadcrumbs">
+    
+    <li class="breadcrumb-item breadcrumb-home">
+      <a href="index.html" class="nav-link" aria-label="Home">
+        <i class="fa-solid fa-home"></i>
+      </a>
+    </li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Photometry system calibration</span></li>
+  </ul>
+</nav>
+</div>
+      
+    </div>
+  
+  
+</div>
+</div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section id="photometry-system-calibration">
+<span id="sys-calibration-label"></span><h1>Photometry system calibration<a class="headerlink" href="#photometry-system-calibration" title="Link to this heading">#</a></h1>
+<section id="select-standards">
+<h2>Select standards<a class="headerlink" href="#select-standards" title="Link to this heading">#</a></h2>
+<p>Observe and grab standards fields in your filters. 30 FITS files of each field in one filter will be enough.
+You should observe different standard fields on different zenith angles (or same field on different zenith angles) to
+obtain good fit of coefficient of extinction K.</p>
+<p>Preferred are <a class="reference external" href="https://www.eso.org/sci/observing/tools/standards/Landolt.html">Landold Equatorial Standard</a>
+but script works with <a class="reference external" href="https://vizier.cds.unistra.fr/viz-bin/VizieR?-source=J/A%2BA/664/A109">Gaia EDR3 and Johnson-Kron-Cousins standards Catalogue</a>
+that contain other standard fields such as M67 for example <a class="footnote-reference brackets" href="#id5" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a>.</p>
+<p>Calibration process is based on papers <a class="footnote-reference brackets" href="#id6" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a>, <a class="footnote-reference brackets" href="#id7" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a>, <a class="footnote-reference brackets" href="#id8" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>4<span class="fn-bracket">]</span></a>.</p>
+<p>All FITS files should be organized in folders by filter. For example you will have <cite>V</cite> folder with all FITS files
+captured in V band and <cite>B</cite> folder where all FITS fileas are captured in B band.</p>
+</section>
+<section id="prepare-config">
+<h2>Prepare config<a class="headerlink" href="#prepare-config" title="Link to this heading">#</a></h2>
+<p>Example of config file is provided with scripts</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">Stars_Stand</span><span class="p">]</span>
+<span class="n">K</span> <span class="o">=</span> <span class="mf">0.35</span>           <span class="c1"># coefficient of extinction if Band. Can be None (will be calculated) or value</span>
+<span class="n">Filter</span> <span class="o">=</span> <span class="n">V</span>         <span class="c1"># Band</span>
+<span class="n">snr</span> <span class="o">=</span> <span class="mf">1.0</span>          <span class="c1"># min star SNR</span>
+<span class="n">max_m_fit</span> <span class="o">=</span> <span class="mf">14.0</span>   <span class="c1"># max V_MAG for process on FITS files</span>
+<span class="n">max_m_calc</span> <span class="o">=</span> <span class="mf">13.0</span>  <span class="c1"># max MAG for calculations</span>
+<span class="n">r_max_val</span> <span class="o">=</span> <span class="mf">0.25</span>   <span class="c1"># delete stars with R2 more that this</span>
+<span class="n">dark_frame</span> <span class="o">=</span> <span class="n">path</span>\<span class="n">to</span>\<span class="n">dark</span>\<span class="n">frame</span>  <span class="c1"># Path to dark frame</span>
+<span class="n">dark_stable</span> <span class="o">=</span> <span class="mi">0</span>    <span class="c1"># If no dark frame than you can subtract some value</span>
+<span class="n">FoV</span> <span class="o">=</span> <span class="mf">1.5</span>          <span class="c1"># Field of View in degrees (radius)</span>
+
+<span class="p">[</span><span class="n">APERTURE</span><span class="p">]</span>
+<span class="n">r_ap</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">an_in</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">an_out</span> <span class="o">=</span> <span class="mi">14</span>
+
+<span class="p">[</span><span class="n">astrometry</span><span class="o">.</span><span class="n">net</span><span class="p">]</span>
+<span class="n">scale_lower</span> <span class="o">=</span> <span class="mf">2.2</span>         <span class="c1"># lower limit arcsec/pix</span>
+<span class="n">scale_upper</span> <span class="o">=</span> <span class="mf">2.6</span>         <span class="c1"># upper limit arcsec/pix</span>
+<span class="n">api_key</span> <span class="o">=</span> <span class="n">xxxxxxxxxxx</span>     <span class="c1"># Astrometry.net api key</span>
+
+<span class="p">[</span><span class="n">SITE</span><span class="p">]</span>
+<span class="n">Name</span> <span class="o">=</span> <span class="n">OBS_NAME</span>
+<span class="n">lat</span> <span class="o">=</span> <span class="mf">48.000</span>
+<span class="n">lon</span> <span class="o">=</span> <span class="mf">22.000</span>
+<span class="n">h</span> <span class="o">=</span> <span class="mf">231.000</span>
+</pre></div>
+</div>
+<p>Config file should be named <cite>config_stars.ini</cite> and created in directory with FITS files
+(in each dir, if you have many dirs for different filters).</p>
+</section>
+<section id="run-calibration">
+<h2>Run calibration<a class="headerlink" href="#run-calibration" title="Link to this heading">#</a></h2>
+<p>Similar to <cite>sat_phot.py</cite> system calibration scripts can be run in same ways.
+The only difference here is that we have two scripts they are stored in <cite>sys_calibrate</cite> folder:</p>
+<ul>
+<li><p><cite>stars_process.py</cite>  path/to/fits/files</p>
+<p>Run to process all FITS files. It will produce <cite>ref_stars_cat.json</cite> and logs. Only parameter that must be given is path to folder with FITS files.</p>
+</li>
+<li><p><cite>stars_calc_params.py</cite> path/to/ref_stars_cat.json</p>
+<p>Calculate system parameters and build the graphs.
+System parameters will appear in stdout and in log file.
+As the parameter set the path to <cite>ref_stars_cat.json</cite> file.</p>
+</li>
+</ul>
+<p>If you wish to recalculate sys parameters (Z_x, C_x, K_x) with other parameters,
+for example change max MAG of selected stars, you can do it without processing FITS files all data are already stored
+in <cite>ref_stars_cat.json</cite> file.</p>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading">#</a></h2>
+<p>Calibration process is based on papers:</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id5" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
+<p>Pancino, E., “The Gaia EDR3 view of Johnson-Kron-Cousins standard stars: the curated Landolt and Stetson collections”,
+<em>Astronomy and Astrophysics</em>, vol. 664, Art. no. A109, EDP, 2022. <a class="reference external" href="https://doi.org/10.1051/0004-6361/202243939">DOI</a>.</p>
+</aside>
+<aside class="footnote brackets" id="id6" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id2">2</a><span class="fn-bracket">]</span></span>
+<p>Hu, S. M., Han, S. H., Guo, D. F., &amp; Du, J. J. (2014).
+The photometric system of the One-meter Telescope at Weihai Observatory of Shandong University.
+Research in Astronomy and Astrophysics, 14(6), 719.
+<a class="reference external" href="https://iopscience.iop.org/article/10.1088/1674-4527/14/6/010/meta">DOI</a></p>
+</aside>
+<aside class="footnote brackets" id="id7" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id3">3</a><span class="fn-bracket">]</span></span>
+<p>Huang, F., Li, J. Z., Wang, X. F., Shang, R. C., Zhang, T. M., Hu, J. Y., … &amp; Jiang, X. J. (2012).
+The photometric system of the Tsinghua-NAOC 80-cm telescope at NAOC Xinglong Observatory.
+Research in Astronomy and Astrophysics, 12(11), 1585.
+<a class="reference external" href="https://iopscience.iop.org/article/10.1088/1674-4527/12/11/012/meta">DOI</a></p>
+</aside>
+<aside class="footnote brackets" id="id8" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">4</a><span class="fn-bracket">]</span></span>
+<p>Kinoshita, D., Chen, C. W., Lin, H. C., Lin, Z. Y., Huang, K. Y., Chang, Y. S., &amp; Chen, W. P. (2005).
+Characteristics and performance of the CCD photometric system at Lulin observatory.
+Chinese Journal of Astronomy and Astrophysics, 5(3), 315.
+<a class="reference external" href="https://iopscience.iop.org/article/10.1088/1009-9271/5/3/011/meta">DOI</a></p>
+</aside>
+</aside>
+</section>
+</section>
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="rso_photometry.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">Photometry of RSO</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="additional_scripts.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">Additional scripts</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <dialog id="pst-secondary-sidebar-modal"></dialog>
+                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+<div
+    id="pst-page-navigation-heading-2"
+    class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> On this page
+  </div>
+  <nav class="bd-toc-nav page-toc" aria-labelledby="pst-page-navigation-heading-2">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#select-standards">Select standards</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prepare-config">Prepare config</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-calibration">Run calibration</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#references">References</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script defer src="_static/scripts/bootstrap.js?digest=8878045cc6db502f8baf"></script>
+<script defer src="_static/scripts/pydata-sphinx-theme.js?digest=8878045cc6db502f8baf"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2025, Kudak Viktor.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 8.2.3.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  <!-- # L10n: Setting the PST URL as an argument as this does not need to be localized -->
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.16.1.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
