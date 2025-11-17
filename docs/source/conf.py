@@ -9,7 +9,7 @@
 project = 'ccd_phot'
 copyright = '2025, Kudak Viktor'
 author = 'Kudak Viktor'
-release = '1.0.1'
+release = '1.0.3'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -59,4 +59,19 @@ html_context = {
     "github_repo": "pydata-sphinx-theme",
     "github_version": "main",
     "doc_path": "docs",
+}
+
+# Додайте цей список до conf.py
+html_css_files = [
+    'no-superscript-citations.css',
+]
+
+# Налаштування для LaTeX.
+latex_engine = 'xelatex'
+
+# Додаткові пакети, які включають підтримку кирилиці, якщо вони не підтягнулися автоматично
+# Хоча xelatex це робить краще, ніж pdflatex.
+latex_elements = {
+    'babel': '\\usepackage[english]{babel}',
+    'papersize': 'a4paper',
 }
