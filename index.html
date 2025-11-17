@@ -363,6 +363,16 @@ Filter (band) and all other parameters are optional.</p>
 </pre></div>
 </div>
 </dd>
+<dt>Start script from its location (with virtual environment)</dt><dd><p>make <cite>bat</cite> (for example <cite>sat_phot_env.bat</cite>) file with command inside</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">venv\Scripts\python sat_phot.py %*</span>
+</pre></div>
+</div>
+<p>where <cite>venv</cite> DIR is your virtual environment</p>
+<p>And start script with command</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">sat_phot_env.bat path/to/fits/files and any other arguments</span>
+</pre></div>
+</div>
+</dd>
 <dt>Start script from FITS files folder</dt><dd><p>In this case your path to <code class="docutils literal notranslate"><span class="pre">sat_phot.py</span></code> should be added to ENVIRONMENT variables. PATH parameter should be <code class="docutils literal notranslate"><span class="pre">.</span></code>.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">sat_phot.py .</span>
 </pre></div>

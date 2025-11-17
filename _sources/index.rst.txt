@@ -143,12 +143,27 @@ Start script from its location
 
       python3 sat_phot.py path\to\fits\files
 
+Start script from its location (with virtual environment)
+    make `bat` (for example `sat_phot_env.bat`) file with command inside
+
+    .. code-block:: console
+
+      venv\Scripts\python sat_phot.py %*
+    where `venv` DIR is your virtual environment
+
+    And start script with command
+
+    .. code-block:: console
+
+        sat_phot_env.bat path/to/fits/files and any other arguments
+
 Start script from FITS files folder
     In this case your path to ``sat_phot.py`` should be added to ENVIRONMENT variables. PATH parameter should be ``.``.
 
     .. code-block:: console
 
       sat_phot.py .
+
 
 
 In general ``sat_phot.py`` has few options:
