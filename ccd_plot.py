@@ -19,7 +19,7 @@ wd = os.path.dirname(filename)
 # print(wd)
 
 path, _ = os.path.split(filename)
-print("Search for configuration in working path")
+print("Search for configuration in working path", path)
 # search for config files in working dir. Config starts from config_sat_XXXXX.ini
 conf_list = glob.glob(os.path.join(path, 'config_sat*.ini'))
 if len(conf_list) == 0:
