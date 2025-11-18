@@ -376,18 +376,61 @@ That means you have installed Python only for processing photometry files and wi
 <dt>Use virtual environment.</dt><dd><p>If you create and setup virtual environment, as it described in <a class="reference internal" href="installation.html#id1"><span class="std std-ref">install section</span></a>, you can use it to lunch the scripts.
 In this case you will never had experience of Python packages version conflicts.</p>
 <p>For example you call your virtual environment  <code class="docutils literal notranslate"><span class="pre">venv</span></code> as it proposed in <a class="reference internal" href="installation.html#id1"><span class="std std-ref">install section</span></a>.</p>
-<p>You can make executable <cite>bat</cite> file (for example name it <code class="docutils literal notranslate"><span class="pre">ccd_phot_python.bat</span></code>) that will use Python from your <code class="docutils literal notranslate"><span class="pre">venv</span></code>.
-This file should be created in <code class="docutils literal notranslate"><span class="pre">CCD_PHOT</span></code> folder where also <code class="docutils literal notranslate"><span class="pre">venv</span></code> directory is located.
-Command inside <code class="docutils literal notranslate"><span class="pre">ccd_phot_python.bat</span></code> file should look like:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">venv\Scripts\python %*</span>
+<p>You can activate your virtual env from <code class="docutils literal notranslate"><span class="pre">ccd_phot</span></code> dir</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">.\venv\Scripts\activate.bat</span>
 </pre></div>
 </div>
-<p>And now you should be able to start any script with command:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">ccd_phot_python.bat script_name.py arguments</span>
+<p>and than start any script</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">python script_name.py arguments</span>
+<span class="go">python sat_phot.py arguments</span>
 </pre></div>
 </div>
-<p>Example:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">ccd_phot_python.bat sat_phot.py path/to/fits/files and any other arguments if needed</span>
+<p>This is enough or,
+if you need to start your virtual env from any other dir, you can make bat file (example <code class="docutils literal notranslate"><span class="pre">ccd_python.bat</span></code> with code below).
+Change <code class="docutils literal notranslate"><span class="pre">PROJECT_ROOT</span></code> to find your ccd_phot directory. Add <code class="docutils literal notranslate"><span class="pre">ccd_phot</span></code> directory to your system path (see: <a class="reference external" href="https://www.eukhost.com/kb/how-to-add-to-the-path-on-windows-10-and-windows-11/">env_link</a>).
+Then, in any directory, you can type:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">ccd_python script_name.py arguments</span>
+</pre></div>
+</div>
+<p>For example:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="go">ccd_python sat_phot.py . -c config_name.ini</span>
+</pre></div>
+</div>
+<p>Code of <code class="docutils literal notranslate"><span class="pre">ccd_python.bat</span></code>:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>@echo off
+
+:: Define your project root path
+set &quot;PROJECT_ROOT=path\to\ccd_phot&quot;
+set &quot;PYTHON_EXE=%PROJECT_ROOT%\venv\Scripts\python.exe&quot;
+
+:: Check if script name is present (original %1)
+if &quot;%1&quot;==&quot;&quot; (
+   echo Error: No Python script name was specified.
+   goto :eof
+)
+
+:: Construct the full script path using the initial %1
+set &quot;SCRIPT_PATH=%PROJECT_ROOT%\%1&quot;
+
+:: --- Validation Checks ---
+if not exist &quot;%PYTHON_EXE%&quot; (
+   echo Error: Python interpreter not found at: &quot;%PYTHON_EXE%&quot;
+   goto :eof
+)
+if not exist &quot;%SCRIPT_PATH%&quot; (
+   echo Error: Script not found at path: &quot;%SCRIPT_PATH%&quot;
+   goto :eof
+)
+
+
+setlocal ENABLEDELAYEDEXPANSION
+ set &quot;_args=%*&quot;
+ set &quot;_args=!_args:*%1 =!&quot;
+
+
+&quot;%PYTHON_EXE%&quot; &quot;%SCRIPT_PATH%&quot; %_args%
+
+endlocal
 </pre></div>
 </div>
 </dd>
@@ -397,7 +440,8 @@ Command inside <code class="docutils literal notranslate"><span class="pre">ccd_
 </section>
 <section id="instruction-for-linux-users">
 <h2>Instruction for <strong>Linux users</strong>:<a class="headerlink" href="#instruction-for-linux-users" title="Link to this heading">#</a></h2>
-<p>Help yourself in a way you like the most :)</p>
+<p>Help yourself in a way you like the most :).</p>
+<p>You know how to deal with it.</p>
 </section>
 </section>
 

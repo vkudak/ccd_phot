@@ -362,7 +362,7 @@
 <section id="res-time2jd">
 <h2>res_time2jd<a class="headerlink" href="#res-time2jd" title="Link to this heading">#</a></h2>
 <dl class="simple">
-<dt><cite>res_time2jd.py</cite>  path/to/res_file</dt><dd><p>Convert time format in the LC result file created by <cite>sat_phot.py</cite> script.
+<dt><cite>res_time2jd.py</cite>  path/to/res_file or dir with res_files, can read a files by mask (example: <em>.ph</em>)</dt><dd><p>Convert time format in the LC result file created by <cite>sat_phot.py</cite> script.
 Convert from UT to JD.</p>
 </dd>
 </dl>
@@ -370,7 +370,7 @@ Convert from UT to JD.</p>
 <section id="res-jd2time">
 <h2>res_jd2time<a class="headerlink" href="#res-jd2time" title="Link to this heading">#</a></h2>
 <dl class="simple">
-<dt><cite>res_jd2time.py</cite>  path/to/res_file</dt><dd><p>Convert time format in the LC result file created by <cite>sat_phot.py</cite> script.
+<dt><cite>res_jd2time.py</cite>  path/to/res_file or dir with res_files, can read a files by mask (example: <em>.ph</em>)</dt><dd><p>Convert time format in the LC result file created by <cite>sat_phot.py</cite> script.
 Convert from JD to UT.</p>
 </dd>
 </dl>
@@ -380,6 +380,14 @@ Convert from JD to UT.</p>
 <dl class="simple">
 <dt><cite>star_phot_flux.py</cite>  path/to/fits/files</dt><dd><p>Act similat to <cite>sat_phot.py</cite> but produce flux for selected star.
 Start must be marked as target in first FITS file header (KEYs <cite>OBJX</cite> &amp; <cite>OBJY</cite>).</p>
+</dd>
+</dl>
+</section>
+<section id="res2eossa">
+<h2>res2eossa<a class="headerlink" href="#res2eossa" title="Link to this heading">#</a></h2>
+<dl class="simple">
+<dt><cite>res2eossa.py</cite>  path/to/phX/files or dir with phX files</dt><dd><p>Converter to EOSSA v3.1.1
+documentation <a class="reference external" href="https://amostech.com/TechnicalPapers/2021/EOSSA_File_Specification_v3.1.1_release4_DistroA.pdf">here</a></p>
 </dd>
 </dl>
 </section>
@@ -427,6 +435,7 @@ Start must be marked as target in first FITS file header (KEYs <cite>OBJX</cite>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#res-time2jd">res_time2jd</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#res-jd2time">res_jd2time</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#star-phot-flux">star_phot_flux</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#res2eossa">res2eossa</a></li>
 </ul>
   </nav></div>
 

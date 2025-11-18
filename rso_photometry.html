@@ -362,8 +362,8 @@ In this case use <code class="docutils literal notranslate"><span class="pre">fi
 <p>Or simply use: <code class="docutils literal notranslate"><span class="pre">file_00001.fits</span></code>, <code class="docutils literal notranslate"><span class="pre">file_00002.fits</span></code> and so on.</p>
 <p>FITS files do not need to contain WCS solution, <code class="docutils literal notranslate"><span class="pre">sat_phot.py</span></code> script do not use it at all.</p>
 <p>Starting from ver 1.0.1 <code class="docutils literal notranslate"><span class="pre">sat_phot.py</span></code> script can try to find object automatically on the first FITS file.
-If script fails than you need to add additional keywords to the first FITS file header
-<code class="docutils literal notranslate"><span class="pre">OBJX:</span> <span class="pre">&lt;float&gt;</span></code> &amp; <code class="docutils literal notranslate"><span class="pre">OBJY:</span> <span class="pre">&lt;float&gt;</span></code> to tell the script where the target initially is situated on the frame.</p>
+If automatic script fails than it look for add additional keywords in the first FITS file header
+<code class="docutils literal notranslate"><span class="pre">OBJX:</span> <span class="pre">&lt;float&gt;</span></code> &amp; <code class="docutils literal notranslate"><span class="pre">OBJY:</span> <span class="pre">&lt;float&gt;</span></code> or for config file (in section <code class="docutils literal notranslate"><span class="pre">[OBJ_POS]</span></code>) to tell the script where the target initially is situated on the frame.</p>
 </section>
 <section id="prepare-sat-config-file">
 <span id="sat-config-label"></span><h2>Prepare sat_config file<a class="headerlink" href="#prepare-sat-config-file" title="Link to this heading">#</a></h2>
@@ -394,6 +394,10 @@ Filter (band) and all other parameters are optional.</p>
 <span class="na">fits_sort</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">DATE-OBS</span><span class="w">    </span><span class="c1"># Header field to sort files by (without quotes). Default sorted by FITS name, without this option at all or set None.</span>
 <span class="na">header_time</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">DATE-OBS</span><span class="w">  </span><span class="c1"># Keyword to obtain time from FITS header</span>
 <span class="na">time_moment</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">start</span><span class="w">     </span><span class="c1"># &#39;start&#39; &#39;end&#39; or &#39;middle&#39; of exposure</span>
+
+<span class="k">[OBJ_POS]</span>
+<span class="na">obj_x</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">360</span><span class="w">       </span><span class="c1"># object X position on first frame according to SAOImage ds9 software</span>
+<span class="na">obj_y</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">312</span><span class="w">       </span><span class="c1"># object Y position on first frame according to SAOImage ds9 software</span>
 
 <span class="k">[APERTURE]</span>
 <span class="na">ap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">8</span>
