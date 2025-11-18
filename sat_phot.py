@@ -215,7 +215,7 @@ for fit_file in fl:
             fr.write(f"#      JD                     X          Y         Xerr      Yerr             Flux     Flux_err")
             fr.write(f"     mag{conf['Filter']}  mag_err     Az(deg)   El(deg)   Rg(Km)    filename\n")
 
-        if t_x is None:
+        if (t_x is None) and (fit_file == fl[0]):
             print('\nNo target info in the HEADER of the first FIT file. Trying to search in CONFIG file [OBJ_POS]')
             t_x, t_y = conf['obj_x'], conf['obj_y']
             if t_y:
