@@ -720,6 +720,9 @@ def read_config_sat(conf_file):
             res["plot_command"] = config.get('PLOT', 'plot_command', fallback='None')
             res["python"] = config.get('PLOT', 'python', fallback='None')
 
+            res["obj_x"] = config.getfloat('OBJ_POS', 'OBJ_X', fallback=None)
+            res["obj_y"] = config.getfloat('OBJ_POS', 'OBJ_Y', fallback=None)
+
             return res
 
         except Exception as E:

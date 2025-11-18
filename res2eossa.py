@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 EOSSA FITS Converter v3.1.1
-Конвертер фотометричних .phX файлів у FITS формат згідно стандарту EOSSA v3.1.1
+Converter of photometrical .phX files in FITS format according to EOSSA v3.1.1 standard
 """
 
 import os
@@ -274,8 +274,8 @@ def convert_to_fits(input_file):
 
 # === CLI === #
 def main():
-    parser = argparse.ArgumentParser(description='Конвертер EOSSA v3.1.1 для .phX файлів')
-    parser.add_argument('input', nargs='+', help='Вхідні файли або шаблон (*.ph*)')
+    parser = argparse.ArgumentParser(description='Converter EOSSA v3.1.1 for .phX files')
+    parser.add_argument('input', nargs='+', help='Input files or mask (*.ph*)')
     args = parser.parse_args()
 
     all_files = []

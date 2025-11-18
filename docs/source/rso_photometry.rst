@@ -14,8 +14,8 @@ Or simply use: ``file_00001.fits``, ``file_00002.fits`` and so on.
 FITS files do not need to contain WCS solution, ``sat_phot.py`` script do not use it at all.
 
 Starting from ver 1.0.1 ``sat_phot.py`` script can try to find object automatically on the first FITS file.
-If script fails than you need to add additional keywords to the first FITS file header
-``OBJX: <float>`` & ``OBJY: <float>`` to tell the script where the target initially is situated on the frame.
+If automatic script fails than it look for add additional keywords in the first FITS file header
+``OBJX: <float>`` & ``OBJY: <float>`` or for config file (in section ``[OBJ_POS]``) to tell the script where the target initially is situated on the frame.
 
 .. _sat-config-label:
 
