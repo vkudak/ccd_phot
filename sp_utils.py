@@ -15,12 +15,17 @@ from datetime import datetime, timedelta
 import math
 from astropy import units as u
 from astropy.io import fits
+from astropy.wcs import WCS
 from astroquery.vizier import Vizier
 import astropy.coordinates as coord
 from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
 import configparser
 from sgp4.io import fix_checksum
+
+from astropy.time import Time
+from astropy.coordinates import EarthLocation, AltAz, ICRS
+from skyfield.api import load, EarthSatellite, Topos
 
 
 
@@ -517,7 +522,7 @@ def get_tle(tle_path: str) -> list:
     return tle_list
 
 
-def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
+def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME, radec_only=False):
     if COSPAR == '' and NORAD == '' and NAME == '':
         return None
     else:
@@ -558,9 +563,6 @@ def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
                 station.lat = lat
                 station.long = lon
                 station.elevation = elev
-                # station.lat = '48.5635505'
-                # station.long = '22.453751'
-                # station.elevation = 231.1325
                 tle[1] = fix_checksum(tle[1])
                 tle[2] = fix_checksum(tle[2])
 
@@ -574,19 +576,25 @@ def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME):
                 el = math.degrees(sat.alt)
                 rg = sat.range / 1000.0  # km
                 az = math.degrees(sat.az)
-                n = n.lstrip("0 ")
+                # Apparent Right Ascension and Declination in DEGREES (float)
+                ra = sat.a_ra / ephem.degree
+                dec = sat.a_dec / ephem.degree
+                n = n.lstrip("0 ") # name of RSO
 
                 sun = ephem.Sun()
                 sun.compute(station)
                 my_phase = calc_phase(sun, sat)
                 my_phase = math.degrees(my_phase)  # check ?
 
-                return el, rg, az, n, no, c, tle, my_phase
+                if radec_only:
+                    return ra, dec
+                else:
+                    return el, rg, az, n, no, c, tle, my_phase
             else:
                 print('\nCan not find TLE for such satellite !!!')
                 sys.exit()
         except Exception as ex:
-            print("Error occurred. Probably wrong TLE file. \n Error = " + ex.message)
+            print("Error occurred. Probably wrong TLE file. \n Error = " + repr(ex))
 
 
 def word_in_hfield(word, h_field):
@@ -944,3 +952,104 @@ def get_star_el(star_name, obs_lat, obs_lon, obs_elev, obs_date, star_ra_dec=Non
     star.compute(observer)
 
     return star.az / ephem.degree, star.alt / ephem.degree  # float in degrees
+
+
+def get_fits_wcs(fits_file_path, hdu_index=0):
+    """Checks a FITS file for World Coordinate System (WCS) information.
+    Example Usage (replace 'path/to/your/file.fits'):
+    is_wcs_present = check_fits_wcs('path/to/your/file.fits')
+    Parameters:
+        fits_file_path: path to FITS file
+        hdu_index: HDU index (integer)
+    Return:
+        astropy.wcs.WCS object if valid WCS keywords are found and parsed.
+        None otherwise (file not found, index out of range, or no WCS info).
+    """
+    try:
+        with fits.open(fits_file_path) as hdul:
+            if hdu_index >= len(hdul):
+                print(f"❌ Error: HDU index {hdu_index} is out of range for this FITS file.")
+                return None
+
+            header = hdul[hdu_index].header
+
+            # --- Attempt to create the WCS object ---
+            # If required WCS keywords are missing, WCS(header) will raise an exception.
+            try:
+                w = WCS(header)
+
+                # Final check: Ensure the WCS object has any meaningful axes.
+                if w.naxis > 0:
+                    print(f"✅ WCS object successfully created for HDU {hdu_index}!")
+                    print(f"   Coordinate types: {w.wcs.ctype}")
+                    return w
+                else:
+                    print(f"⚠️ WCS object created for HDU {hdu_index}, but no valid coordinate axes found (naxis=0).")
+                    return None
+
+            except Exception as e:
+                # This block catches the exception raised when WCS keywords are missing.
+                # In older versions, this is the safest way to handle the WCS parsing failure.
+                # print(f"   WCS Parsing Error: {type(e).__name__}") # Optional for debugging
+                print(f"❌ No WCS information found in HDU {hdu_index} or header is incomplete/invalid.")
+                return None
+
+
+    except FileNotFoundError:
+        print(f"❌ Error: File not found at {fits_file_path}")
+        return None
+    except Exception as e:
+        # Catches other potential I/O or general FITS reading issues
+        print(f"❌ An unexpected error occurred while opening the FITS file: {type(e).__name__} - {e}")
+        return None
+
+
+def find_rso_pixel_position(fits_file_path, conf, tle_list, date_time,
+                            hdu_index=0):
+    """
+    Calculates the expected pixel position of an RSO on a FITS image frame.
+
+    Args:
+        fits_file_path (str): Path to the FITS file.
+        conf (dict): Dictionary containing configuration information.
+        tle_list (list): List of TLE lines to use.
+        date_time (datetime): Date and time of observation.
+        hdu_index (int): HDU to read the header/WCS from (default is 0).
+
+    Returns:
+        tuple[float, float] or None: Pixel coordinates (x, y) where the RSO
+                                      should be, or None if the calculation fails.
+    """
+
+    # 1. READ WCS and FITS Time (MANDATORY)
+    wcs = get_fits_wcs(fits_file_path, hdu_index)
+    if wcs is None:
+        print("❌ Error: Could not retrieve valid WCS from FITS file. Cannot proceed to pixel calculation.")
+        return None
+
+    ra_deg, dec_deg = calc_from_tle(conf['site_lat'], conf['site_lon'], conf['site_elev'],
+                            tle_list,
+                            date_time,
+                            conf['cospar'], conf['norad'], conf['name'],
+                            radec_only=True)
+    # print(f"🌍 Apparent Coordinates (RA, Dec): ({ra_deg:.6f}, {dec_deg:.6f}) deg")
+
+    # 4. CONVERT CELESTIAL TO PIXEL COORDINATES (WCS)
+
+    # The WCS object requires inputs in the frame specified by its CTYPE keywords (often ICRS)
+    # The pixel calculation must be performed using NumPy arrays, even for single points
+
+    try:
+        # wcs.wcs_world2pix expects (RA, Dec, origin).
+        # origin=1 means FITS standard 1-based indexing for pixel coordinates.
+        x_pix, y_pix = wcs.wcs_world2pix(np.array([[ra_deg, dec_deg]]), 1).squeeze()
+
+        # print(f"\n✨ Success: RSO Expected Position on Frame:")
+        # print(f"   Pixel X: {x_pix:.3f}")
+        # print(f"   Pixel Y: {y_pix:.3f}")
+
+        return float(x_pix), float(y_pix)
+
+    except Exception as e:
+        print(f"❌ Error during WCS world-to-pixel conversion: {e}")
+        return None
