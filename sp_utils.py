@@ -23,10 +23,6 @@ from sklearn.linear_model import LinearRegression
 import configparser
 from sgp4.io import fix_checksum
 
-from astropy.time import Time
-from astropy.coordinates import EarthLocation, AltAz, ICRS
-from skyfield.api import load, EarthSatellite, Topos
-
 
 
 def convert_ndarray(obj):
