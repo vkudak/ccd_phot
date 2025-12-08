@@ -720,6 +720,8 @@ def read_config_sat(conf_file):
             res["plot_command"] = config.get('PLOT', 'plot_command', fallback='None')
             res["python"] = config.get('PLOT', 'python', fallback='None')
 
+            res["debug"] = config.getboolean('DEBUG', 'debug', fallback=False)
+
             return res
 
         except Exception as E:

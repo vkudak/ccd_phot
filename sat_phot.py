@@ -76,7 +76,7 @@ if conf['fits_sort'] not in ['name', 'None']:
     print(f'Sorting FITS files by header {conf["fits_sort"]} ...')
     fl = sort_file_list(path, fl, field=conf['fits_sort'])
 
-debug = True
+debug = conf['debug']
 
 if debug:
     if os.path.isdir(path + "//fig"):
