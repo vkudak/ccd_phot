@@ -215,11 +215,17 @@ for fit_file in fl:
             fr.write(f"#      JD                     X          Y         Xerr      Yerr             Flux     Flux_err")
             fr.write(f"     mag{conf['Filter']}  mag_err     Az(deg)   El(deg)   Rg(Km)    filename\n")
 
-        if t_x is None:
-            print("\nNo target info in the HEADER of the first FIT file. Trying to search with DAOFind ...")
+        if (t_x is None) and (fit_file == fl[0]):
+            print('\nNo target info in the HEADER of the first FIT file. Trying to search in CONFIG file [OBJ_POS]')
+            t_x, t_y = conf['obj_x'], conf['obj_y']
+            if t_y:
+                t_y = height - t_y
+
+        if t_x is None:  # still None
+            print("\nNo target info in the HEADER and CONFIG file of the first FIT file. Trying to search with DAOFind ...")
             t_x, t_y = obj_finder_dao(data[15:-15, :])   # cut 15 pix up and down
             if t_x and t_y is not None:
-                t_y = t_y + 5
+                t_y = t_y + 15
                 print(f"Object detected at X = {t_x:5.2f} Y = {t_y:5.2f}  OK.  ", end="")
                 t_y = height - t_y  # Target_pos coord_system
             else:
