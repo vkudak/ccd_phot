@@ -973,14 +973,27 @@ def get_fits_wcs(fits_file_path, hdu_index=0):
             # If required WCS keywords are missing, WCS(header) will raise an exception.
             try:
                 w = WCS(header)
+                # --- Сувора фінальна перевірка WCS ---
+                # 1. Перевіряємо, що WCS має осі (w.naxis > 0)
+                # 2. Перевіряємо, що хоча б одна вісь має визначений тип координат (ctype).
+                #    Це відфільтрує WCS, створені лише за замовчуванням (з CTYPE='' '').
 
-                # Final check: Ensure the WCS object has any meaningful axes.
+                has_meaningful_ctype = False
                 if w.naxis > 0:
+                    # w.wcs.ctype — це numpy array рядків (наприклад, ['', ''])
+                    # Перевіряємо, чи є хоча б один CTYPE не порожнім
+                    if any(ctype and ctype.strip() for ctype in w.wcs.ctype):
+                        has_meaningful_ctype = True
+
+                if has_meaningful_ctype:
                     print(f"✅ WCS object successfully created for HDU {hdu_index}!")
                     print(f"   Coordinate types: {w.wcs.ctype}")
+                    # print(w) # Вивід об'єкта WCS
                     return w
                 else:
-                    print(f"⚠️ WCS object created for HDU {hdu_index}, but no valid coordinate axes found (naxis=0).")
+                    print(f"❌ No meaningful WCS information found in HDU {hdu_index} or header is incomplete/invalid.")
+                    print(
+                        f"   Reason: WCS object created (naxis={w.naxis}), but no valid coordinate types (CTYPE) found.")
                     return None
 
             except Exception as e:
