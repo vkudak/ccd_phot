@@ -20,6 +20,8 @@ def obj_finder_dao(data, min_separation=30):
     mean, median, std = np.mean(data), np.median(data), np.std(data)
     daofind = DAOStarFinder(fwhm=3.0, threshold=5. * std, min_separation=min_separation)  # , roundlo=-0.05, roundhi=0.3)
     sources = daofind(data - median)
+    if sources is None:
+        return None, None
     if len(sources) > 0:
         sources.sort("peak")
         sources.reverse()

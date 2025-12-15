@@ -443,7 +443,7 @@ def plotting(image, params, save=False, filename=None, par=None, err=None, tar=N
         print(E)
 
 
-def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=False):
+def fit_m(image, x0, y0, gate, save_png=False, fig_name=None, centring=False, silent=False):
     # gate_x = gate_y
     data_fit = image[y0 - gate:y0 + gate, x0 - gate:x0 + gate]
     # plt.imshow(data_fit, cmap='Greys', origin='lower')
@@ -488,7 +488,7 @@ def fit_m(image, x0, y0, gate, debug, fig_name=None, centring=False, silent=Fals
     err = np.sqrt(np.diag(pcov))
     amp = par[-1]
     target = [x0 - gate + par[0], y0 - gate + par[1], err[0], err[1], amp]
-    if debug:
+    if save_png:
         # plotting(data_fit, par, save=True, filename=fig_name, par=target, gate=gate)
         plotting(data_fit, par, save=True, filename=fig_name, par=par, err=err, tar=target, gate=gate)
     return target
@@ -727,7 +727,8 @@ def read_config_sat(conf_file):
             res["obj_x"] = config.getfloat('OBJ_POS', 'OBJ_X', fallback=None)
             res["obj_y"] = config.getfloat('OBJ_POS', 'OBJ_Y', fallback=None)
 
-            res["debug"] = config.getboolean('DEBUG', 'debug', fallback=False)
+            res["save_png"] = config.getboolean('DEBUG', 'save_png', fallback=False)
+            res["save_corr"] = config.getboolean('DEBUG', 'save_corr', fallback=False)
 
             return res
 
@@ -837,7 +838,7 @@ def sort_file_list(path, fl, field='DATE-OBS'):
     return sort_list
 
 
-def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, phase=None):
+def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, phase=None, save_corr=False, path=""):
     """
     Parameters
     ----------
@@ -848,6 +849,9 @@ def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, phase=None):
     :param float k: coefficient of extinction
     :param float exp: Exposition
     :param min_mag: minimum reachable magnitude
+    :param phase: phase of satellite
+    :param save_corr: save corrections
+    :param path: path to working directory
 
     Returns
     -------
@@ -864,9 +868,10 @@ def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, phase=None):
 
         m = zp + m_inst - mzr + mr
 
-        # with open("tmp_mag.txt", "a+") as f:
-        #     phase = math.degrees(phase)
-        #     f.write(f"{m:5.3f}    {zp:5.3f}   {m_inst:5.3f}   {mzr:5.3f}  {mr:5.3f}  {el:5.3f}   {rg:5.3f}  {phase:5.3f}\n")
+        if save_corr:
+            with open(os.path.join(path,"tmp_mag.txt"), "a+") as f:
+                phase = math.degrees(phase)
+                f.write(f"{m:5.3f}    {zp:5.3f}   {m_inst:5.3f}   {mzr:5.3f}  {mr:5.3f}  {el:5.3f}   {rg:5.3f}  {phase:5.3f}\n")
     return m
 
 

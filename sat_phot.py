@@ -76,9 +76,8 @@ if conf['fits_sort'] not in ['name', 'None']:
     print(f'Sorting FITS files by header {conf["fits_sort"]} ...')
     fl = sort_file_list(path, fl, field=conf['fits_sort'])
 
-debug = conf['debug']
 
-if debug:
+if conf['save_png']:
     if os.path.isdir(path + "//fig"):
         files = glob.glob(path + "//fig//*.*")
         for f in files:
@@ -277,7 +276,7 @@ for fit_file in fl:
 
         try:
             fig_name = path + "//fig//" + fit_file + "_man.png"
-            target = fit_m(data, x0, y0, gate=gate2, debug=debug, fig_name=fig_name, centring=True)
+            target = fit_m(data, x0, y0, gate=gate2, save_png=conf['save_png'], fig_name=fig_name, centring=True)
         except Exception as E:
             print(E)
             print("Error - curve_fit failed\n")
@@ -286,7 +285,7 @@ for fit_file in fl:
         target = None
         fig_name = path + "//fig//" + fit_file + ".png"
         try:
-            target = fit_m(data, x0, y0, gate=conf['gate'], debug=debug, fig_name=fig_name)  # , centring=True)
+            target = fit_m(data, x0, y0, gate=conf['gate'], save_png=conf['save_png'], fig_name=fig_name)  # , centring=True)
             # print (target[-1])
             # if target[-1] > min_signal:
 
@@ -295,12 +294,12 @@ for fit_file in fl:
             x0, y0 = int(target[0]), int(target[1])
             err = target[2]
             if (err > 0.9) and (err < 1.5):
-                target = fit_m(data, x0, y0, gate=gate2, debug=debug, fig_name=fig_name, centring=True)
+                target = fit_m(data, x0, y0, gate=gate2, save_png=conf['save_png'], fig_name=fig_name, centring=True)
             elif err > 1.5:
-                target = fit_m(data, x0, y0, gate=conf['gate'], debug=debug, fig_name=fig_name)
+                target = fit_m(data, x0, y0, gate=conf['gate'], save_png=conf['save_png'], fig_name=fig_name)
 
                 x0, y0 = int(target[0]), int(target[1])  # one more time with smaller window
-                target = fit_m(data, x0, y0, gate=gate2, debug=debug, fig_name=fig_name, centring=True)
+                target = fit_m(data, x0, y0, gate=gate2, save_png=conf['save_png'], fig_name=fig_name, centring=True)
 
             err = target[2]
             if err > 1:
@@ -398,7 +397,12 @@ for fit_file in fl:
             conf['cospar'], conf['norad'], conf['name'])
         if El < 5:
             print("WARNING! Elevation of satellite < 5 deg. Check settings!")
-        mag = calc_mag(flux, El, Rg, conf['A'], conf['k'], exp, min_mag=conf['min_real_mag'], phase=phase)
+        mag = calc_mag(flux, El, Rg, conf['A'], conf['k'], exp,
+                       min_mag=conf['min_real_mag'],
+                       phase=phase,
+                       save_corr=conf['save_corr'],
+                       path=path
+                       )
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f  %12.5f   %s\n" % (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, flux, fit_file))
         # fr.write("%s %s    %8.5f  %8.5f  %8.5f  %8.5f     %s   %6.3f    %8.3f %8.3f   %8.3f   %s\n" %
             # (date, time[:12], phot_table['xcenter'][z].value, phot_table['ycenter'][z].value, xerr, yerr, '{:13.4f}'.format(flux), mag, Az, El, Rg, fit_file))
