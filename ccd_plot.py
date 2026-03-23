@@ -77,19 +77,20 @@ def read_name(filename):
     with open(filename, "r") as myfile:
         head = [next(myfile) for _ in range(20)]
     # print(head)
-    # print("---------------------------------"
+    # print("---------------------------------")
     for line in head:
         line = line.split()
         # print (line)
-        if line[1].strip() == "COSPAR":
-            cospar = line[3]
-        if line[1].strip() == "NORAD":
-            norad = line[3]
-        if line[1].strip() == "NAME":
-            name = " ".join(line[3:])
-            name = name.lstrip('0 ')
-        if line[1].strip() == "dt":
-            dt = line[3]
+        if len(line) > 1:
+            if line[1].strip() == "COSPAR":
+                cospar = line[3]
+            if line[1].strip() == "NORAD":
+                norad = line[3]
+            if line[1].strip() == "NAME":
+                name = " ".join(line[3:])
+                name = name.lstrip('0 ')
+            if line[1].strip() == "dt":
+                dt = line[3]
     return cospar, norad, name, dt
 
 

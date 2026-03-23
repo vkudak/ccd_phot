@@ -7,13 +7,16 @@ from scipy.optimize import curve_fit
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 import matplotlib
+import json
+
+from setuptools.command.setopt import config_file
 
 matplotlib.use('Agg')
 from matplotlib.patches import Circle
 import ephem
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import math
-from astropy import units as u
+from astropy import units as u, conf
 from astropy.io import fits
 from astropy.wcs import WCS
 from astroquery.vizier import Vizier
@@ -22,6 +25,8 @@ from tqdm import tqdm
 from sklearn.linear_model import LinearRegression
 import configparser
 from sgp4.io import fix_checksum
+
+from skyfield.api import EarthSatellite, load, wgs84, Topos
 
 
 
@@ -518,77 +523,185 @@ def get_tle(tle_path: str) -> list:
     return tle_list
 
 
-def calc_from_tle(lat, lon, elev, TLE_list, date_time, COSPAR, NORAD, NAME, radec_only=False):
+def get_omm(file_path: str) -> list:
+    """
+    Read file with OMM
+    Parameters
+    ----------
+        file_path: path to omm file in JSON format
+
+    Returns
+    -------
+        list of OMMs
+    """
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+
+    latest_data = {}
+    for entry in data:
+        obj_id = entry['OBJECT_ID']
+        epoch = datetime.fromisoformat(entry['EPOCH'].replace('Z', ''))
+
+        if obj_id not in latest_data or epoch > datetime.fromisoformat(latest_data[obj_id]['EPOCH'].replace('Z', '')):
+            latest_data[obj_id] = entry
+
+    return list(latest_data.values())
+
+
+def find_satellite(omm_data, search_value, key='NORAD_CAT_ID'):
+    """
+    Шукає супутник у списку OMM за вказаним ключем.
+    key може бути 'NORAD_CAT_ID' або 'OBJECT_ID' (COSPAR).
+    """
+    # Перетворюємо search_value на рядок, оскільки в JSON вони часто як рядки
+    search_value = str(search_value)
+
+    # Використовуємо next() для пошуку першого збігу
+    # Вона поверне об'єкт, якщо знайдено, або None, якщо нічого не знайдено
+    return next((item for item in omm_data if str(item.get(key)) == search_value), None)
+
+
+def normalize_cospar(short_id):
+    """
+    Перетворює '18082A' у '2018-082A' або '98067A' у '1998-067A'.
+    """
+    # Якщо формат уже правильний (має дефіс), повертаємо як є
+    if '-' in short_id or len(short_id) < 5:
+        return short_id
+
+    # Витягуємо рік (перші дві цифри)
+    year_short = int(short_id[:2])
+    # Решта — номер запуску та літера об'єкта
+    rest = short_id[2:]
+
+    # Визначаємо століття (поріг 57 рік — запуск першого супутника)
+    if year_short > 57:
+        year_full = f"19{year_short:02d}"
+    else:
+        year_full = f"20{year_short:02d}"
+
+    # Формуємо рядок з дефісом: РРРР-НННЛ
+    # Зазвичай номер запуску займає 3 цифри (напр. 082)
+    # Але для надійності просто вставимо дефіс після року
+    return f"{year_full}-{rest[:3]}{rest[3:]}"
+
+
+def calc_from_tle(config_ini, orbit_list, date_time, radec_only=False):
+    lat = config_ini['site_lat']
+    lon = config_ini['site_lon']
+    elev = config_ini['site_elev']
+    COSPAR = config_ini['cospar']
+    NORAD = config_ini['norad']
+    NAME = config_ini['name']
+
     if COSPAR == '' and NORAD == '' and NAME == '':
         return None
     else:
         try:
-            tle = []
-            for i in range(0, len(TLE_list)):
-                l2 = TLE_list[i][1].split()
-                cosp = l2[2]
-                nor = l2[1]
-                name = TLE_list[i][0]
-                if cosp == COSPAR:
-                    c = l2[2]
-                    no = l2[1][:-1]
-                    n = TLE_list[i][0]
-                    tle = TLE_list[i]
-            if tle == []:
+            if config_ini['orbit_format'] == 'TLE':
+                TLE_list = orbit_list
+                tle = []
                 for i in range(0, len(TLE_list)):
                     l2 = TLE_list[i][1].split()
-                    nor = l2[1][:-1]
-                    # print 'nor=', nor
-                    if nor == NORAD:
-                        c = l2[2]
-                        no = l2[1][:-1]
-                        n = TLE_list[i][0]
-                        tle = TLE_list[i]
-            if tle == []:
-                for i in range(0, len(TLE_list)):
-                    l2 = TLE_list[i][1].split()
+                    cosp = l2[2]
+                    nor = l2[1]
                     name = TLE_list[i][0]
-                    if name == NAME:
+                    if cosp == COSPAR:
                         c = l2[2]
                         no = l2[1][:-1]
                         n = TLE_list[i][0]
                         tle = TLE_list[i]
-            if len(tle) > 0:
-                # Calculating  El, Rg
-                station = ephem.Observer()
-                station.lat = lat
-                station.long = lon
-                station.elevation = elev
-                tle[1] = fix_checksum(tle[1])
-                tle[2] = fix_checksum(tle[2])
+                if tle == []:
+                    for i in range(0, len(TLE_list)):
+                        l2 = TLE_list[i][1].split()
+                        nor = l2[1][:-1]
+                        # print 'nor=', nor
+                        if nor == NORAD:
+                            c = l2[2]
+                            no = l2[1][:-1]
+                            n = TLE_list[i][0]
+                            tle = TLE_list[i]
+                if tle == []:
+                    for i in range(0, len(TLE_list)):
+                        l2 = TLE_list[i][1].split()
+                        name = TLE_list[i][0]
+                        if name == NAME:
+                            c = l2[2]
+                            no = l2[1][:-1]
+                            n = TLE_list[i][0]
+                            tle = TLE_list[i]
+                if len(tle) > 0:
+                    # Calculating  El, Rg
+                    station = ephem.Observer()
+                    station.lat = lat
+                    station.long = lon
+                    station.elevation = elev
+                    tle[1] = fix_checksum(tle[1])
+                    tle[2] = fix_checksum(tle[2])
 
-                sat = ephem.readtle(tle[0], tle[1], tle[2])
-                try:
-                    station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
-                except Exception:
-                    print("Error - Wrong date time format...")
+                    sat = ephem.readtle(tle[0], tle[1], tle[2])
+                    try:
+                        station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
+                    except Exception:
+                        print("Error - Wrong date time format...")
 
-                sat.compute(station)
-                el = math.degrees(sat.alt)
-                rg = sat.range / 1000.0  # km
-                az = math.degrees(sat.az)
-                # Apparent Right Ascension and Declination in DEGREES (float)
-                ra = sat.a_ra / ephem.degree
-                dec = sat.a_dec / ephem.degree
-                n = n.lstrip("0 ") # name of RSO
+                    sat.compute(station)
+                    el = math.degrees(sat.alt)
+                    rg = sat.range / 1000.0  # km
+                    az = math.degrees(sat.az)
+                    # Apparent Right Ascension and Declination in DEGREES (float)
+                    ra = sat.a_ra / ephem.degree
+                    dec = sat.a_dec / ephem.degree
+                    n = n.lstrip("0 ") # name of RSO
 
-                sun = ephem.Sun()
-                sun.compute(station)
-                my_phase = calc_phase(sun, sat)
-                my_phase = math.degrees(my_phase)  # check ?
+                    sun = ephem.Sun()
+                    sun.compute(station)
+                    my_phase = calc_phase(sun, sat)
+                    my_phase = math.degrees(my_phase)  # check ?
 
-                if radec_only:
-                    return ra, dec
+                    if radec_only:
+                        return ra, dec
+                    else:
+                        return el, rg, az, n, no, c, tle, my_phase
                 else:
-                    return el, rg, az, n, no, c, tle, my_phase
-            else:
-                print('\nCan not find TLE for such satellite !!!')
-                sys.exit()
+                    print('\nCan not find TLE for such satellite !!!')
+                    sys.exit()
+
+            elif config_ini['orbit_format'] == 'OMM':
+                omm_data = get_omm(config_ini['orbit_file'])
+                ts = load.timescale()
+
+                sat_omm = find_satellite(omm_data, NORAD, key='NORAD_CAT_ID')
+                if sat_omm is None:
+                    sat_omm = find_satellite(omm_data, normalize_cospar(COSPAR), key='OBJECT_ID')
+                # if still None
+                if sat_omm is None:
+                    print('\nCan not find orbital elements (OMM) for such satellite !!!')
+                    sys.exit()
+                else:
+                    sat = EarthSatellite.from_omm(ts, sat_omm)
+                    station = wgs84.latlon(float(lat), float(lon),
+                                           elevation_m=float(elev))
+                    difference = sat - station
+
+                    tt = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f").replace(tzinfo=timezone.utc)
+                    t = ts.from_datetime(tt)
+                    topocentric = difference.at(t)
+                    alt, az, distance = topocentric.altaz()
+                    # not used yet
+                    # my_phase = calc_phase_skyfield(t, sat, config_ini)
+
+                    if radec_only:
+                        ra, dec, distance = topocentric.radec()  # ICRF ("J2000")
+                        return ra.degrees, dec.degrees
+                    else:
+                        return (alt.degrees, distance.km, az.degrees,
+                                sat_omm['OBJECT_NAME'],
+                                sat_omm['NORAD_CAT_ID'],
+                                sat_omm['OBJECT_ID'][2:].replace('-', ''),
+                                sat_omm,
+                                0.5) # phase
+
         except Exception as ex:
             print("Error occurred. Probably wrong TLE file. \n Error = " + repr(ex))
 
@@ -687,7 +800,8 @@ def read_config_sat(conf_file):
             res['norad'] = config['NAME']['NORAD']
             res['name'] = config['NAME']['NAME']
 
-            res['tle_file'] = config.get('TLE', 'tle_file')
+            res['orbit_file'] = config.get('orbit', 'file')
+            res['orbit_format'] = config.get('orbit', 'format', fallback="TLE")
 
             res['A'] = float(config['STD']['A'])
             res['k'] = float(config['STD']['k'])
@@ -875,6 +989,44 @@ def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, phase=None, save_corr=False, 
     return m
 
 
+def calc_phase_skyfield(t, sat, conf):
+    # t - timescale ts
+
+    # TODO: load in some other func ?
+    eph = load('de421.bsp')
+    sun = eph['sun']
+
+    # Спостерігач
+    observer = wgs84.latlon(conf['lat'], conf['lon'], elevation_m=conf['elev'])
+
+    # Положення
+    sat_state = sat.at(t)
+
+
+    if not sat_state.is_sunlit(eph):
+        return 0.0
+    # Вектор супутник → Сонце
+    sun_vec = sat_state.observe(sun).position.km
+
+    # Вектор супутник → спостерігач
+    obs_vec = sat_state.observe(observer).position.km
+
+
+    # Кут між векторами
+    cos_alpha = np.dot(sun_vec, obs_vec) / (
+            np.linalg.norm(sun_vec) * np.linalg.norm(obs_vec)
+    )
+    # Чисельна стабілізація
+    cos_alpha = np.clip(cos_alpha, -1.0, 1.0)
+    # alpha = np.arccos(cos_alpha)
+
+    # Фаза
+    k = (1 + np.cos(cos_alpha)) / 2
+    illum_percent = k * 100
+
+    return illum_percent
+
+
 def calc_phase(sun, sat):
     # Calculate distance from observer to the sun, and to the satellite (length a and b of our triangle).
     sun_distance = (sun.earth_distance * ephem.meters_per_au) - ephem.earth_radius
@@ -1018,7 +1170,7 @@ def get_fits_wcs(fits_file_path, hdu_index=0):
         return None
 
 
-def find_rso_pixel_position(fits_file_path, conf, tle_list, date_time,
+def find_rso_pixel_position(fits_file_path, conf, orbit_list, date_time,
                             hdu_index=0):
     """
     Calculates the expected pixel position of an RSO on a FITS image frame.
@@ -1041,11 +1193,8 @@ def find_rso_pixel_position(fits_file_path, conf, tle_list, date_time,
         print("❌ Error: Could not retrieve valid WCS from FITS file. Cannot proceed to pixel calculation.")
         return None
 
-    ra_deg, dec_deg = calc_from_tle(conf['site_lat'], conf['site_lon'], conf['site_elev'],
-                            tle_list,
-                            date_time,
-                            conf['cospar'], conf['norad'], conf['name'],
-                            radec_only=True)
+    ra_deg, dec_deg = calc_from_tle(conf, orbit_list, date_time,
+                                    radec_only=True)
     # print(f"🌍 Apparent Coordinates (RA, Dec): ({ra_deg:.6f}, {dec_deg:.6f}) deg")
 
     # 4. CONVERT CELESTIAL TO PIXEL COORDINATES (WCS)

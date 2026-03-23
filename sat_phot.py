@@ -67,7 +67,12 @@ else:
     # print(f"Using config '{conf_list[0]}'")
     print(f"Using config '{conf_name}'")
 
-tle_list = get_tle(conf['tle_file'])
+if conf['orbit_format'] == 'TLE':
+    orbit_list = get_tle(conf['orbit_file'])
+elif conf['orbit_format'] == 'OMM':
+    orbit_list = get_omm(conf['orbit_file'])
+else:
+    orbit_list = None
 
 fl = get_file_list(path)
 # print('Sorting FITS by name...')
@@ -172,14 +177,23 @@ for fit_file in fl:
     # print(mean, median, std)
 
     if fit_file == fl[0]:  # make header--------------------------------------------------------------------
-        El, Rg, Az, name, nor, cosp, tle_lines, _ = calc_from_tle(conf['site_lat'], conf['site_lon'], conf['site_elev'],
-                                                               tle_list,
-                                                               date_time,
-                                                               conf['cospar'], conf['norad'], conf['name'])
-        fr.write("# TLE:\n")
-        fr.write("# %s\n" % tle_lines[0])
-        fr.write("# %s\n" % tle_lines[1])
-        fr.write("# %s\n" % tle_lines[2])
+        El, Rg, Az, name, nor, cosp, tle_lines, _ = calc_from_tle(conf,
+                                                                  orbit_list,
+                                                                  date_time
+                                                                  )
+
+        print(conf['orbit_format'])
+        if conf['orbit_format'] == 'TLE':
+            fr.write("# TLE:\n")
+            fr.write("# %s\n" % tle_lines[0])
+            fr.write("# %s\n" % tle_lines[1])
+            fr.write("# %s\n" % tle_lines[2])
+        if conf['orbit_format'] == 'OMM':
+            fr.write("# OMM:\n")
+            fr.write("# %s\n" % tle_lines)
+            fr.write("# \n")
+            fr.write("# \n") # empty lines
+
 
         date, time = date_time.split("T")
         fr.write("# %s %s\n" % (date, time))  # exp corrected start date_time
@@ -232,7 +246,7 @@ for fit_file in fl:
                 # TODO: Check if this xy will be close to DAOfind xy. If yes set this method above DAOfind func.
                 print("No target was found on the image")
                 print("Searching for WCS in FITS file...")
-                rso_pos = find_rso_pixel_position(os.path.join(path, fit_file), conf, tle_list, date_time)
+                rso_pos = find_rso_pixel_position(os.path.join(path, fit_file), conf, orbit_list, date_time)
                 if rso_pos is None:
                     sys.exit()
                 else:
@@ -398,10 +412,10 @@ for fit_file in fl:
         # print(phot_table['residual_aperture_sum'])
         # print (phot_table)
 
-        El, Rg, Az, name, nor, cosp, tle_lines, phase = calc_from_tle(
-            conf['site_lat'], conf['site_lon'], conf['site_elev'],
-            tle_list, date_time,
-            conf['cospar'], conf['norad'], conf['name'])
+        El, Rg, Az, name, nor, cosp, tle_lines, phase = calc_from_tle(conf,
+                                                                  orbit_list,
+                                                                  date_time
+                                                                  )
         if El < 5:
             print("WARNING! Elevation of satellite < 5 deg. Check settings!")
         mag = calc_mag(flux, El, Rg, conf['A'], conf['k'], exp,
