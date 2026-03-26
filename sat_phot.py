@@ -105,9 +105,10 @@ if time_key in header:
     date_time = header.get(time_key)
 else: # fall back to standard keyword and hope it exists
     date_time = header.get('DATE-OBS')
-    if date_time == '0001-01-01T00:00:00.0000000':
-        # TODO: check what happens if there are no valid GPS time in header. End_time is bad idea
-        date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
+
+if date_time == '0001-01-01T00:00:00.0000000':
+    # TODO: check what happens if there are no valid GPS time in header. End_time is bad idea (GPS_ST ???)
+    date_time = header.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
 
 ut1 = date_time.split("T")[1]
 ut1 = ut1[:2] + ut1[3:5] + ut1[6:8]
@@ -182,7 +183,7 @@ for fit_file in fl:
                                                                   date_time
                                                                   )
 
-        print(conf['orbit_format'])
+        # print(conf['orbit_format'])
         if conf['orbit_format'] == 'TLE':
             fr.write("# TLE:\n")
             fr.write("# %s\n" % tle_lines[0])
@@ -199,7 +200,12 @@ for fit_file in fl:
         fr.write("# %s %s\n" % (date, time))  # exp corrected start date_time
 
         header_last = fits.getheader(path + "//" + fl[-1])
-        date_time_last = fix_datetime(header_last.get('DATE-OBS'))
+        t_last = header_last.get('DATE-OBS')
+        if t_last == '0001-01-01T00:00:00.0000000':
+            # TODO: check what happens if there are no valid GPS time in header. End_time is bad idea (GPS_ST ???)
+            t_last = header_last.get('DATE-END')  # NO GPS time data !!!!!!!!!!!!
+
+        date_time_last = fix_datetime(t_last)
         date_time_last = datetime.strptime(date_time_last[:-1], "%Y-%m-%dT%H:%M:%S.%f")
         date_time_last = date_time_last + timedelta(seconds=float(exp / 2.0))
         date_time_last = date_time_last.strftime("%Y-%m-%dT%H:%M:%S.%f")

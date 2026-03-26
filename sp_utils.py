@@ -801,7 +801,7 @@ def read_config_sat(conf_file):
             res['name'] = config['NAME']['NAME']
 
             res['orbit_file'] = config.get('orbit', 'file')
-            res['orbit_format'] = config.get('orbit', 'format', fallback="TLE")
+            res['orbit_format'] = config.get('orbit', 'format', fallback="TLE").upper()
 
             res['A'] = float(config['STD']['A'])
             res['k'] = float(config['STD']['k'])
