@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 import json
 
-from setuptools.command.setopt import config_file
-
 matplotlib.use('Agg')
 from matplotlib.patches import Circle
 import ephem
