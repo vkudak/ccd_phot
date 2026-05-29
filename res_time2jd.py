@@ -51,8 +51,11 @@ def save_jd_data(filename_jd, header,
 
 
 if __name__ == "__main__":
-    # filename = sys.argv[1]
-    filename = " ".join(sys.argv[1:]).strip('"')
+    if sys.platform == "win32":
+        filename = " ".join(sys.argv[1:]).strip('"')
+    else:
+        filename = sys.argv[1]
+    # filename = " ".join(sys.argv[1:]).strip('"')
 
     if os.path.isfile(filename):
         filelist = [filename]
@@ -60,7 +63,7 @@ if __name__ == "__main__":
         # we got path with mask
         filelist = glob.glob(filename)
 
-    
+    print(filelist)
     for filename in filelist:
         wd = os.path.dirname(filename)
         base = os.path.basename(filename)

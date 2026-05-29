@@ -51,8 +51,11 @@ def save_ut_data(filename_ut, header,
 
 
 if __name__ == "__main__":
-    # filename = sys.argv[1]
-    filename = " ".join(sys.argv[1:]).strip('"')
+    if sys.platform == "win32":
+        filename = " ".join(sys.argv[1:]).strip('"')
+    else:
+        filename = sys.argv[1]
+    # filename = " ".join(sys.argv[1:]).strip('"')
 
     if os.path.isfile(filename):
         filelist = [filename]
