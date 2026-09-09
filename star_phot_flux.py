@@ -184,7 +184,7 @@ for fit_file in fl:
 
         try:
             fig_name = path + "//fig//" + fit_file + "_man.png"
-            target = fit_m(data, x0, y0, gate=gate2, debug=debug, fig_name=fig_name, centring=True)
+            target = fit_m(data, x0, y0, gate=gate2, fig_name=fig_name, centring=True)
         except Exception as E:
             print(E)
             print("Error - curve_fit failed\n")
@@ -193,7 +193,7 @@ for fit_file in fl:
         target = None
         fig_name = path + "//fig//" + fit_file + ".png"
         try:
-            target = fit_m(data, x0, y0, gate=conf['gate'], debug=debug, fig_name=fig_name)  # , centring=True)
+            target = fit_m(data, x0, y0, gate=conf['gate'], fig_name=fig_name)  # , centring=True)
             # print (target[-1])
             # if target[-1] > min_signal:
 
@@ -263,7 +263,9 @@ for fit_file in fl:
 
         Az, El = get_star_el(star_name=conf['star_name'],
                              obs_lat=conf['site_lat'], obs_lon=conf['site_lon'], obs_elev=conf['site_elev'],
-                             obs_date=date_time)
+                             obs_date=date_time,
+                             star_ra_dec=[conf['ra'], conf['dec']]
+                             )
         if El < 5:
             print("WARNING! Elevation of satellite < 5 deg. Check settings!")
         mag = calc_mag(flux, El, 1000, conf['A'], conf['k'], exp, min_mag=conf['min_real_mag'])
