@@ -4,6 +4,7 @@ import os
 import sys
 # from astropy.stats import mad_std
 from scipy.optimize import curve_fit
+from scipy.interpolate import PchipInterpolator
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 import matplotlib
@@ -798,7 +799,10 @@ def read_config_sat(conf_file):
             res['norad'] = config['NAME']['NORAD']
             res['name'] = config['NAME']['NAME']
 
-            res['orbit_file'] = config.get('orbit', 'file')
+            orbit_file = config.get('orbit', 'file')
+            if not os.path.isabs(orbit_file):
+                orbit_file = os.path.join(os.path.dirname(os.path.abspath(conf_file)), orbit_file)
+            res['orbit_file'] = orbit_file
             res['orbit_format'] = config.get('orbit', 'format', fallback="TLE").upper()
 
             res['A'] = float(config['STD']['A'])
@@ -819,7 +823,7 @@ def read_config_sat(conf_file):
             res['min_real_mag'] = config.getfloat('STD', 'min_real_mag', fallback=15.0)
             res['max_center_error'] = config.getfloat('STD', 'max_center_err', fallback=2.0)
             res['fits_sort'] = config.get('STD', 'fits_sort', fallback='None')
-
+            res['gain_file'] = config.get('STD', 'ccd_gain_file', fallback=None)
             res['dark_frame'] = config.get('STD', 'dark_frame', fallback=False)
 
             res['r_ap'] = float(config['APERTURE']['ap'])
@@ -950,7 +954,7 @@ def sort_file_list(path, fl, field='DATE-OBS'):
     return sort_list
 
 
-def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, phase=None, save_corr=False, path=""):
+def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, e_gain=None, e_gain_0=None, phase=None, save_corr=False, path=""):
     """
     Parameters
     ----------
@@ -961,6 +965,8 @@ def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, phase=None, save_corr=False, 
     :param float k: coefficient of extinction
     :param float exp: Exposition
     :param min_mag: minimum reachable magnitude
+    :param e_gain: effective gain of camera [e-/ADU]
+    :param e_gain_0: effective gain of camera [e-/ADU] at GAIN=0
     :param phase: phase of satellite
     :param save_corr: save corrections
     :param path: path to working directory
@@ -973,7 +979,12 @@ def calc_mag(flux, el, rg, zp, k, exp, min_mag=15, phase=None, save_corr=False, 
     if flux < 0:
         return min_mag
     else:
-        m_inst = -2.5 * math.log10(flux / exp)
+        if (e_gain is not None) and (e_gain_0 is not None):
+            K = e_gain / e_gain_0
+        else:
+            K = 1.0
+                                         
+        m_inst = -2.5 * math.log10((K*flux) / exp)
         mz = 1 / (math.cos(math.pi / 2 - math.radians(el)))  # 1/cos(90-el)
         mr = -5 * math.log10(rg / 1000.0)
         mzr = k * mz
@@ -1214,3 +1225,62 @@ def find_rso_pixel_position(fits_file_path, conf, orbit_list, date_time,
     except Exception as e:
         print(f"❌ Error during WCS world-to-pixel conversion: {e}")
         return None
+
+
+def read_ccd_gain_file(gain_file_path, gain=0):
+    """
+    Reads a CCD gain file and returns the system_gain(gain) and system_gain(0) value.
+
+    Args:
+        gain_file_path (str): Path to the gain file.
+        gain (int): Gain value to retrieve (default is 0).
+    Returns:
+        tuple: (system_gain(gain), system_gain(0)) if successful, else (None, None).
+    """
+    if gain == 0:
+        return None, None
+
+    if not os.path.isfile(gain_file_path):
+        print(f"❌ Error: Gain file not found at {gain_file_path}")
+        return None, None
+
+    try:
+        gain_values = {}
+        with open(gain_file_path, 'r') as f:
+            for line in f:
+                fields = line.split()
+                if len(fields) < 2 or fields[0].startswith('#'):
+                    continue
+                try:
+                    gain_value = float(fields[0])
+                    system_gain = float(fields[1])
+                except ValueError:
+                    continue
+                gain_values[gain_value] = system_gain
+
+        if 0.0 not in gain_values:
+            print(f"❌ Error: Gain 0 must be present in {gain_file_path}")
+            return None, None
+
+        if len(gain_values) < 2:
+            print(f"❌ Error: At least two gain values are required in {gain_file_path}")
+            return None, None
+
+        gains = np.array(sorted(gain_values))
+        system_gains = np.array([gain_values[value] for value in gains])
+        interpolate = PchipInterpolator(gains, system_gains, extrapolate=False)
+
+        requested_gain = float(gain)
+        if requested_gain < gains[0] or requested_gain > gains[-1]:
+            print(f"❌ Error: Gain {requested_gain} is outside the available range "
+                  f"{gains[0]} to {gains[-1]}")
+            return None, None
+
+        requested_system_gain = gain_values.get(requested_gain, float(interpolate(requested_gain)))
+        system_gain_0 = gain_values[0.0]
+
+        return requested_system_gain, system_gain_0
+
+    except Exception as e:
+        print(f"❌ Error reading gain file: {e}")
+        return None, None

@@ -116,6 +116,13 @@ ymd = date_time.split("T")[0]
 ymd = ymd.replace("-", "")
 ##############
 
+gain = header.get('GAIN')
+if gain is not None:
+    e_gain, e_gain_0 = read_ccd_gain_file(conf['gain_file'], gain)
+else:
+    e_gain, e_gain_0 = None, None
+
+
 if conf['norad'] != "":
     res_path = os.path.join(path, "result_" + conf['norad'] + "_" + ymd + "_UT" + ut1 + ".ph" + conf['Filter'])
 else:
@@ -426,6 +433,8 @@ for fit_file in fl:
             print("WARNING! Elevation of satellite < 5 deg. Check settings!")
         mag = calc_mag(flux, El, Rg, conf['A'], conf['k'], exp,
                        min_mag=conf['min_real_mag'],
+                       e_gain=e_gain, 
+                       e_gain_0=e_gain_0,
                        phase=phase,
                        save_corr=conf['save_corr'],
                        path=path
