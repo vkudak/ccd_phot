@@ -14,7 +14,6 @@ import json
 
 from astroquery.astrometry_net import AstrometryNet
 from astropy.wcs import WCS
-import ephem
 import configparser
 import warnings
 
@@ -74,10 +73,6 @@ if not conf:
     sys.exit()
 
 
-station = ephem.Observer()
-station.lat = conf['site_lat']  #'48.5635505'
-station.long = conf['site_lon']  #'22.453751'
-station.elevation = conf['site_elev']  #231.1325
 band = conf["band"]
 
 for i in range(len(database)):

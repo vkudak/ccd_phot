@@ -38,6 +38,8 @@ and install all dependencies in new ``venv``.
 
    $ cd ccd_phot
    $ python3 -m venv venv
+   $ .venv/Scripts/activate  # On Windows
+   $ source venv/bin/activate  # On Unix or MacOS
    $ pip install -r requirements.txt
 
 Or install with system python

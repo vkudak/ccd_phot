@@ -6,7 +6,6 @@ from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 import numpy as np
-from ephem import degree
 from numpy.ma import masked
 from photutils.aperture import CircularAperture, CircularAnnulus
 
@@ -18,12 +17,13 @@ from datetime import datetime, timedelta
 
 from astroquery.astrometry_net import AstrometryNet
 from astropy.wcs import WCS
-import ephem
 import warnings
 # Додаємо кореневий каталог у PYTHONPATH
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from photometry_with_errors import iraf_style_photometry
-from sp_utils import get_from_Gaia_EDR3_std, read_config_stars, get_file_list, word_in_hfield, fit_m, convert_ndarray
+from sp_utils import (get_from_Gaia_EDR3_std, read_config_stars, get_file_list,
+                      word_in_hfield, fit_m, convert_ndarray,
+                      get_star_horizontal)
 
 
 '''
@@ -68,11 +68,6 @@ if ploting:
 conf = read_config_stars(os.path.join(path, 'config_stars.ini'), log_file)
 if not conf:
     sys.exit()
-
-station = ephem.Observer()
-station.lat = conf['site_lat']  # '48.5635505'
-station.long = conf['site_lon']  # '22.453751'
-station.elevation = conf['site_elev']  # 231.1325
 
 fl = get_file_list(path)
 
@@ -272,15 +267,10 @@ for fit_file in fl:
                     # TODO: if name starts from 'M67' read MAGs from file m67ids.txt ?
                     #  Make Table from this file
 
-                    star = ephem.FixedBody()
-                    star._ra = ephem.degrees(str(ra_s))
-                    star._dec = ephem.degrees(str(dec_s))
-                    # print(star._ra, star._dec)
-                    station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
-                    star.compute(station)
-                    el = star.alt  # in radians !!!!!!!!
-                    Mz = 1 / (math.cos(math.pi / 2 - el))
-                    # print(el,ephem.degrees(el)*ephem.degree, Mz)
+                    _, el = get_star_horizontal(
+                        ra_s, dec_s, conf['site_lat'], conf['site_lon'],
+                        conf['site_elev'], date_time, ra_unit='degrees')
+                    Mz = 1 / math.cos(math.radians(90 - el))
 
                     if (flux > 0) and (vmr is not masked):
                         fs = str.format("{0:" ">10.3f}", flux)

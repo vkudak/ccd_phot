@@ -1,39 +1,42 @@
+# Photometry of artificial satellites with CCD QHY-174M
+
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/vkudak/ccd_phot)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-closed/vkudak/ccd_phot)
 ![GitHub Release](https://img.shields.io/github/release/vkudak/ccd_phot)
 
-Photometry of artificial satellites with CCD QHY-174M
-===================
 ## ccd_stat_phot
 
 Python scripts to process photometry obtained on CCD QHY-174M
 
 Based on:
+
 - astropy
 - photutils
-- photometry errors are estimated with wfc3_photometry procedures (https://github.com/spacetelescope/wfc3_photometry)
+- photometry errors are estimated with wfc3_photometry procedures ([wfc3_photometry](https://github.com/spacetelescope/wfc3_photometry))
 - astroquery
 
-Detailed documentation can be found [here](https://vkudak.github.io/ccd_phot/)
+Detailed documentation can be found in the [ccd_phot documentation](https://vkudak.github.io/ccd_phot/).
 
-# Before usage
-* Virtual environment should be created and all requirements installed.
+## Before usage
+
+Virtual environment should be created and all requirements installed.
 Run scripts from this ENV in the future.
 
 OR (Windows option):
 
-* Add **ccd_phot** directory path to system environment, so you can use scripts right from command line if all requirements all satisfied. 
+Add **ccd_phot** directory path to system environment, so you can use scripts right from command line if all requirements all satisfied.
 
-# Usage
+## Usage
+
 1. Mark satellite on first FITS frame (Add **OBJX** and **OBJY** keywords in header).
     If object is not marked script will try to find it (with **DAOFind** func) as brightest object on the frame.
-3. Prepare `config_sat.ini` in same directory where FITS files are located. Config can be namad in other way, but must match the mask `config_satSOMETHING.ini`
-3. Start `sat_phot.py` with path to FITS files as parameter (`sat_phot.py . ` OR `sat_phot.py c:\test`)
+2. Prepare `config_sat.ini` in same directory where FITS files are located. Config can be namad in other way, but must match the mask `config_satSOMETHING.ini`
+3. Start `sat_phot.py` with path to FITS files as parameter (`sat_phot.py .` OR `sat_phot.py c:\test`)
 4. Make resulting plots `ccd_plot.py path\\to\\result_file.phX`
 5. Done :)
 
+## Other arguments
 
-# Other arguments
 usage: `sat_phot.py [-h] [-c CONFIG] [-s_file START_FILE] path`
 
 positional arguments:

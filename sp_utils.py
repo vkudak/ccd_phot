@@ -9,10 +9,11 @@ from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 import matplotlib
 import json
+from pathlib import Path
+from functools import lru_cache
 
 matplotlib.use('Agg')
 from matplotlib.patches import Circle
-import ephem
 from datetime import datetime, timedelta, timezone
 import math
 from astropy import units as u, conf
@@ -25,7 +26,14 @@ from sklearn.linear_model import LinearRegression
 import configparser
 from sgp4.io import fix_checksum
 
-from skyfield.api import EarthSatellite, load, wgs84, Topos
+from skyfield.api import EarthSatellite, Star, load, wgs84
+
+TIMESCALE = load.timescale()
+
+
+@lru_cache(maxsize=1)
+def _load_ephemeris():
+    return load(str(Path(__file__).with_name('de421.bsp')))
 
 
 
@@ -585,6 +593,52 @@ def normalize_cospar(short_id):
     return f"{year_full}-{rest[:3]}{rest[3:]}"
 
 
+def _parse_utc_datetime(value):
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        text = str(value).strip().replace('Z', '+00:00')
+        date_time, separator, fraction = text.partition('.')
+        if separator:
+            zone_start = max(fraction.find('+'), fraction.find('-'))
+            if zone_start >= 0:
+                zone = fraction[zone_start:]
+                fraction = fraction[:zone_start]
+            else:
+                zone = ''
+            text = f"{date_time}.{fraction[:6]}{zone}"
+        parsed = datetime.fromisoformat(text)
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _angle_degrees(value, unit):
+    text = str(value).strip()
+    if ':' in text or ' ' in text:
+        parts = text.replace(':', ' ').split()
+        sign = -1 if parts[0].startswith('-') else 1
+        major = abs(float(parts[0]))
+        minutes = float(parts[1]) if len(parts) > 1 else 0
+        seconds = float(parts[2]) if len(parts) > 2 else 0
+        angle = sign * (major + minutes / 60 + seconds / 3600)
+    else:
+        angle = float(text)
+    return angle * 15 if unit == 'hours' else angle
+
+
+def get_star_horizontal(ra, dec, obs_lat, obs_lon, obs_elev, obs_date,
+                        ra_unit='hours'):
+    star = Star(ra_hours=_angle_degrees(ra, ra_unit) / 15,
+                dec_degrees=_angle_degrees(dec, 'degrees'))
+    observer = wgs84.latlon(float(obs_lat), float(obs_lon),
+                            elevation_m=float(obs_elev))
+    t = TIMESCALE.from_datetime(_parse_utc_datetime(obs_date))
+    apparent = (_load_ephemeris()['earth'] + observer).at(t).observe(star).apparent()
+    altitude, azimuth, _ = apparent.altaz()
+    return azimuth.degrees, altitude.degrees
+
+
 def calc_from_tle(config_ini, orbit_list, date_time, radec_only=False):
     lat = config_ini['site_lat']
     lon = config_ini['site_lon']
@@ -630,32 +684,22 @@ def calc_from_tle(config_ini, orbit_list, date_time, radec_only=False):
                             n = TLE_list[i][0]
                             tle = TLE_list[i]
                 if len(tle) > 0:
-                    # Calculating  El, Rg
-                    station = ephem.Observer()
-                    station.lat = lat
-                    station.long = lon
-                    station.elevation = elev
-                    tle[1] = fix_checksum(tle[1])
-                    tle[2] = fix_checksum(tle[2])
-
-                    sat = ephem.readtle(tle[0], tle[1], tle[2])
-                    try:
-                        station.date = datetime.strptime(date_time[:-1], "%Y-%m-%dT%H:%M:%S.%f")
-                    except Exception:
-                        print("Error - Wrong date time format...")
-
-                    sat.compute(station)
-                    el = math.degrees(sat.alt)
-                    rg = sat.range / 1000.0  # km
-                    az = math.degrees(sat.az)
-                    # Apparent Right Ascension and Declination in DEGREES (float)
-                    ra = sat.a_ra / ephem.degree
-                    dec = sat.a_dec / ephem.degree
+                    station = wgs84.latlon(float(lat), float(lon),
+                                           elevation_m=float(elev))
+                    sat = EarthSatellite(fix_checksum(tle[1]),
+                                         fix_checksum(tle[2]), tle[0], TIMESCALE)
+                    t = TIMESCALE.from_datetime(_parse_utc_datetime(date_time))
+                    topocentric = (sat - station).at(t)
+                    alt, azimuth, distance = topocentric.altaz()
+                    ra_angle, dec_angle, _ = topocentric.radec(epoch='date')
+                    el = alt.degrees
+                    rg = distance.km
+                    az = azimuth.degrees
+                    ra = ra_angle.degrees
+                    dec = dec_angle.degrees
                     n = n.lstrip("0 ") # name of RSO
 
-                    sun = ephem.Sun()
-                    sun.compute(station)
-                    my_phase = calc_phase(sun, sat)
+                    my_phase = calc_phase(t, sat, station)
                     my_phase = math.degrees(my_phase)  # check ?
 
                     if radec_only:
@@ -1036,26 +1080,17 @@ def calc_phase_skyfield(t, sat, conf):
     return illum_percent
 
 
-def calc_phase(sun, sat):
-    # Calculate distance from observer to the sun, and to the satellite (length a and b of our triangle).
-    sun_distance = (sun.earth_distance * ephem.meters_per_au) - ephem.earth_radius
-    satellite_distance = sat.range
-
-    # Calculate angle separating sun and satellite (angle C of our triangle)
-    separation_angle = ephem.separation(sat, sun)
-
-    # Calculate distance between sun and satellite (length c of our triangle)
-    # c = sqrt(a*a + b*b - 2 * a * b * cos(C))
-    sun_satellite_distance = math.sqrt((sun_distance * sun_distance) + (satellite_distance * satellite_distance) -
-                                       (2 * sun_distance * satellite_distance * math.cos(separation_angle)))
-
-    # Now we know the length of all sides of the triangle, calculate the phase angle (angle A of our triangle)
-    # A = acos((b*b + c*c - a*a) / (2 * b * c))
-    phase_angle = math.acos(((satellite_distance * satellite_distance) +
-                             (sun_satellite_distance * sun_satellite_distance) - (sun_distance * sun_distance)) / (
-                                        2 * satellite_distance * sun_satellite_distance))
-
-    return phase_angle
+def calc_phase(t, sat, observer):
+    eph = _load_ephemeris()
+    satellite_position = sat.at(t).position.km
+    sun_position = eph['earth'].at(t).observe(eph['sun']).position.km
+    observer_position = observer.at(t).position.km
+    sun_vector = sun_position - satellite_position
+    observer_vector = observer_position - satellite_position
+    cos_phase = np.dot(sun_vector, observer_vector) / (
+        np.linalg.norm(sun_vector) * np.linalg.norm(observer_vector)
+    )
+    return math.acos(np.clip(cos_phase, -1.0, 1.0))
 
 
 def fix_datetime(date_time):
@@ -1099,21 +1134,8 @@ def get_star_el(star_name, obs_lat, obs_lon, obs_elev, obs_date, star_ra_dec=Non
         star_ra_dec[1] = result['DEJ2000'].value.data[0]
         star_ra_dec[1] = star_ra_dec[1].replace(" ", ":")
 
-    star = ephem.FixedBody()
-    star._ra = ephem.hours(star_ra_dec[0]) #('10:10:10')
-    star._dec = ephem.degrees(star_ra_dec[1]) #('10:10:10')
-
-    observer = ephem.Observer()
-    observer.date = datetime.strptime(obs_date, "%Y-%m-%dT%H:%M:%S.%f0")
-
-    # longitude = ephem.degrees('-1.91667')
-    observer.lon = ephem.degrees(obs_lon)
-    observer.lat = ephem.degrees(obs_lat)
-    observer.elev = float(obs_elev)
-
-    star.compute(observer)
-
-    return star.az / ephem.degree, star.alt / ephem.degree  # float in degrees
+    return get_star_horizontal(star_ra_dec[0], star_ra_dec[1], obs_lat,
+                               obs_lon, obs_elev, obs_date)
 
 
 def get_fits_wcs(fits_file_path, hdu_index=0):

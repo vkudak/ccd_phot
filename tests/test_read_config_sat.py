@@ -3,7 +3,17 @@ import subprocess
 import sys
 from pathlib import Path
 
-from sp_utils import read_config_sat
+from sp_utils import get_star_horizontal, read_config_sat
+
+
+def test_star_horizontal_accepts_hour_and_degree_ra():
+    common_args = ("+20:00:00", 40, -70, 0, "2024-01-10T18:07:00.0000000")
+    hour_ra = get_star_horizontal("10:00:00", *common_args)
+    degree_ra = get_star_horizontal(150, *common_args, ra_unit="degrees")
+
+    assert hour_ra == degree_ra
+    assert 0 <= hour_ra[0] < 360
+    assert -90 <= hour_ra[1] <= 90
 
 
 def test_resolves_orbit_file_relative_to_config_directory():
